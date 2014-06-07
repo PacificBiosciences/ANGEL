@@ -40,7 +40,7 @@ python setup.py install
 The usage is:
 
 ```
-dumb_predict.py fasta_filename output_prefix 
+dumb_predict.py <fasta_filename> <output_prefix> 
        [--use_top USE_TOP] [--min_aa_length MIN_AA_LENGTH]
        [--use_rev_strand] [--cpus CPUS]
 ```
@@ -72,11 +72,49 @@ For example:
 
 ```
 cd ANGEL/training_example
-angel_train.py test.human.training_50.cds test.human.training_50.utr test.human.training_50.classifier.pickle --cpus 24
+angel_train.py test.human.training_50.cds test.human.training_50.utr \
+      test.human.training_50.classifier.pickle --cpus 24
 ```
+
+On a typical 500-sequence training dataset, the training may take several hours. The human MCF-7 training set took 4 hours on a 24-core machine.
+
 
 #### ANGEL ORF prediction
 
+The usage is:
+
+```
+angel_predict.py <input_fasta> <classifier_pickle> <output_prefix>
+       [--min_angel_aa_length] [--min_dumb_aa_length] [--use_rev_strand] [--cpus]
+```
+
+For each sequence, ANGEL uses the classifer to predict the coding potential of each codon in each of the three frames then finds the most likely stretch of window that is the open reading frame. It then does the following:
+
+* If there is only one predicted ORF, tag it as "confident". In this case, it is unlikely there are sequencing errors.
+* If there are multiple ORFs but only one exceeds `min_angel_aa_length` threshold, output that one ORF and tag it as "likely". In this case, the program is semi-positive that there are no sequencing errors or that the error occurs at the ends of the CDS, allowing successful prediction of a relatively long continuous ORF.
+* If there are multiple ORFs (could be in multiple frames) exceeding the length threshold, output all of them and tag them as "suspicious". In this case, the ORFs could be genuine complete ORFs (indicating a polycistronic transcript) or fragments of the same ORF that has frame shift due to uncorrected sequencing errors.
+
+The longest ORF length from the ANGEL process is recorded as *T*. Then, the same dumb ORF prediction (which simply looks for the longest stretch of ORF without stop codon interruption) is done on the forward three frames. Each predicted dumb ORF is also outputted if and only if its length is greater than both *T* and `min_dumb_aa_length`. This is a fallback process in case the ANGEL classifier failed to detect coding potential in the CDS region.
+
+If `--use_rev_strand` is given, then the same process is repeated on the reverse-complement of the sequence.
+
+
+For example:
+
+```
+angel_predict.py test.human_1000seqs.fa test.human.training_50.classifier.pickle test.human \
+      --use_rev_strand --min_dumb_aa_length 300
+```
+
+The output files are: <output_prefix>.ANGLE.cds, <output_prefix>.ANGLE.pep, <output_prefix>.ANGLE.utr.
+
+Each output sequence ID has the format:
+```
+<seq_id> type:<tag>-<completeness> len:<ORF length (aa)> strand:<strand> pos:<CDS range>
+```
+
+Where *tag* is "confident", "likely", or "suspicious" for ANGEL predictions, and "dumb" for dumb ORF predictions.
+*completeness* is either "complete", "5partial", "3partial", or "internal" based on the presence or absence of start and stop codons.
 
 
 ## LICENSE
