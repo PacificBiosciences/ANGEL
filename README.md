@@ -13,13 +13,11 @@ The program is divided into three parts:
 The ANGEL classifer is based on the classifer described in the Shimizu *et al.*, "**ANGLE: a sequencing errors resistant program for predicting protein coding regions in unfinished cDNA.**", *J Bioinform Comput Biol*, (2006). The naming change to ANGEL is intentional to disambiguate from the author implementation of ANGLE.
 
 
-SOFTWARE REQUIREMENT
-======
+## SOFTWARE REQUIREMENT
 You will need to install [CD-HIT](http://www.bioinformatics.org/cd-hit/) and have it available in your $PATH variable to run dumb ORF prediction.
 
 
-INSTALLATION
-======
+## INSTALLATION
 It is recommended that you set up and activate a virtual environment before installation. See [here](https://github.com/PacificBiosciences/cDNA_primer/wiki/Setting-up-virtualenv-and-installing-pbtranscript-tofu) howto.
 
 You can download this GitHub repository in many ways, here we assume you will be using git clone:
@@ -32,9 +30,9 @@ python setup.py install
 ```
 
 
-USAGE
-======
-## Dumb ORF prediction
+## USAGE
+
+#### Dumb ORF prediction
 
 `dumb_predict.py` takes as input a fasta file and outputs all longest ORFs (could be overlapping) that exceed the user-defined minimum length. In addition, it uses [CD-HIT](http://www.bioinformatics.org/cd-hit/) to remove redundancy to create a "top training set" for ANGEL classifier training. 
 
@@ -60,7 +58,7 @@ test.human.pep, test.human.cds, test.human.utr: which are the results of longest
 test.human.training_50.cds, test.human.training_50.utr: which are the top 50 non-redundant CDS/UTR sequences that can be used as training data for ANGEL classifier 
 
 
-## ANGEL classifer training
+#### ANGEL classifer training
 
 `angel_train.py` takes a CDS fasta file and a UTR fasta file and outputs a trained classifier pickle file. Note that the training dataset does not have to be the same as the input to ANGEL ORF prediction below. You can use any curated dataset like Gencode, RefSeq, or another dataset so long as they are from the same or similar species so the classifier can be trained properly.
 
@@ -77,12 +75,11 @@ cd ANGEL/training_example
 angel_train.py test.human.training_50.cds test.human.training_50.utr test.human.training_50.classifier.pickle --cpus 24
 ```
 
-## ANGEL ORF prediction
+#### ANGEL ORF prediction
 
 
 
-LICENSE
-======
+## LICENSE
 #################################################################################$$
 # Copyright (c) 2011-2014, Pacific Biosciences of California, Inc.
 #
