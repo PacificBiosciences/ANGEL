@@ -1,8 +1,8 @@
 __author__ = 'etseng@pacificbiosciences.com'
 
 import os, sys, subprocess
-from ORFutils import sanity_check_ATCG, sanity_check_cdhit, write_CDS_n_PEP
-import ORFscores
+from Angel.ORFutils import sanity_check_ATCG, sanity_check_cdhit, write_CDS_n_PEP
+import Angel.ORFscores as ORFscores
 from Bio import SeqIO
 
 @sanity_check_ATCG

@@ -5,9 +5,9 @@ import itertools
 from Bio import SeqIO
 from Bio.Alphabet import IUPAC
 import Bio.Data.CodonTable as CodonTable
-import c_ORFscores as sp2
+import Angel.c_ORFscores as sp2
 from multiprocessing import Process
-import findPath
+import Angel.findPath as findPath
 
 AMINO_LETTERS = 'ACDEFGHIKLMNPQRSTVWY*'
 NT_LETTERS = 'GATC'

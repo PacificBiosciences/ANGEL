@@ -8,10 +8,8 @@ import numpy as np
 from sklearn.ensemble import AdaBoostClassifier
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
-import ORFscores
-import c_ORFscores
-from ORFutils import write_CDS_n_PEP
-import DumbORF
+from Angel import c_ORFscores, ORFscores, DumbORF
+from Angel.ORFutils import write_CDS_n_PEP
 
 def add_to_background(o_all, records):
     for r in records:
@@ -118,7 +116,7 @@ def ANGLE_predict_worker(input_fasta, output_prefix, bdt, o_all, min_ANGLE_aa_le
     write_CDS_n_PEP(ORFs, output_prefix, min_utr_length=50, append_file=True, starting_index=starting_index)
 
 
-def distribute_ANGLE_predict(fasta_filename, output_prefix, bdt_pickle_filename, num_workers=5):
+def distribute_ANGLE_predict(fasta_filename, output_prefix, bdt_pickle_filename, num_workers=5, min_ANGLE_aa_length=50, min_dumb_aa_length=100, use_rev_strand=True):
     tmpdir = "ANGLE.tmp." + str(int(time.time()))
     os.makedirs(tmpdir)
 
@@ -149,7 +147,7 @@ def distribute_ANGLE_predict(fasta_filename, output_prefix, bdt_pickle_filename,
     for i, input_fasta in enumerate(list_of_fasta):
         print >> sys.stderr, "Pool worker for", input_fasta
         starting_index = i * n + 1
-        p = Process(target=ANGLE_predict_worker, args=(input_fasta, input_fasta+'.ANGLE', bdt, o_all, 50, 100, True, starting_index))
+        p = Process(target=ANGLE_predict_worker, args=(input_fasta, input_fasta+'.ANGLE', bdt, o_all, min_ANGLE_aa_length, min_dumb_aa_length, use_rev_strand, starting_index))
         p.start()
         workers.append(p)
 
@@ -172,8 +170,10 @@ def distribute_ANGLE_predict(fasta_filename, output_prefix, bdt_pickle_filename,
 
     print >> sys.stderr, "Output written to {0}.ANGLE.cds, {0}.ANGLE.pep, {0}.ANGLE.utr".format(output_prefix)
 
-#    for x in list_of_fasta:
-#        os.remove(x)
-#        os.remove(x + '.ANGLE.cds')
-#        os.remove(x + '.ANGLE.pep')
-#        os.remove(x + '.ANGLE.utr')
+    for x in list_of_fasta:
+        os.remove(x)
+        os.remove(x + '.ANGLE.cds')
+        os.remove(x + '.ANGLE.pep')
+        os.remove(x + '.ANGLE.utr')
+
+    os.removedirs(tmpdir)
