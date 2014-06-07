@@ -14,12 +14,12 @@ The ANGEL classifer is based on the classifer described in the Shimizu *et al.*,
 
 
 SOFTWARE REQUIREMENT
-=====
+======
 You will need to install [CD-HIT](http://www.bioinformatics.org/cd-hit/) and have it available in your $PATH variable to run dumb ORF prediction.
 
 
 INSTALLATION
-=====
+======
 It is recommended that you set up and activate a virtual environment before installation. See [here](https://github.com/PacificBiosciences/cDNA_primer/wiki/Setting-up-virtualenv-and-installing-pbtranscript-tofu) howto.
 
 You can download this GitHub repository in many ways, here we assume you will be using git clone:
@@ -33,7 +33,7 @@ python setup.py install
 
 
 USAGE
-=====
+======
 ## Dumb ORF prediction
 
 `dumb_predict.py` takes as input a fasta file and outputs all longest ORFs (could be overlapping) that exceed the user-defined minimum length. In addition, it uses [CD-HIT](http://www.bioinformatics.org/cd-hit/) to remove redundancy to create a "top training set" for ANGEL classifier training. 
@@ -82,7 +82,7 @@ angel_train.py test.human.training_50.cds test.human.training_50.utr test.human.
 
 
 LICENSE
-=====
+======
 #################################################################################$$
 # Copyright (c) 2011-2014, Pacific Biosciences of California, Inc.
 #
