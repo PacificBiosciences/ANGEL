@@ -80,6 +80,7 @@ angel_train.py test.human.training_50.cds test.human.training_50.utr test.human.
 
 
 ## LICENSE
+```
 #################################################################################$$
 # Copyright (c) 2011-2014, Pacific Biosciences of California, Inc.
 #
@@ -116,4 +117,4 @@ angel_train.py test.human.training_50.cds test.human.training_50.utr test.human.
 # OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #################################################################################$$
-
+```
