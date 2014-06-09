@@ -8,8 +8,11 @@ import numpy as np
 from sklearn.ensemble import AdaBoostClassifier
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
+import Angel
 from Angel import c_ORFscores, ORFscores, DumbORF
 from Angel.ORFutils import write_CDS_n_PEP
+
+sys.modules['c_ORFscores'] = Angel.c_ORFscores # need this for unpickling to work
 
 def add_to_background(o_all, records):
     for r in records:
@@ -46,7 +49,7 @@ def get_data_parallel(o_all, records, frames, num_workers):
     return data
 
 
-def ANGLE_training(cds_filename, utr_filename, output_pickle, num_workers=3):
+def ANGEL_training(cds_filename, utr_filename, output_pickle, num_workers=3):
     coding = [ r for r in SeqIO.parse(open(cds_filename), 'fasta') ]
     utr = [ r for r in SeqIO.parse(open(utr_filename), 'fasta') ]
 
@@ -67,23 +70,22 @@ def ANGLE_training(cds_filename, utr_filename, output_pickle, num_workers=3):
 
     print >> sys.stderr, "classifier trained. putting pickle to", output_pickle
 
-    with open(output_pickle, 'w') as f:
-        dump(bdt, f)
+    with open(output_pickle, 'wb') as f:
+        dump({'bdt':bdt, 'o_all':o_all}, f)
 
     return data, target, bdt
 
 
-def ANGLE_predict_worker(input_fasta, output_prefix, bdt, o_all, min_ANGLE_aa_length=50, min_dumb_aa_length=100, use_rev_strand=False, starting_index=1):
-
-    ORFs = []
+def ANGEL_predict_worker(input_fasta, output_prefix, bdt, o_all, min_ANGEL_aa_length=50, min_dumb_aa_length=100, use_rev_strand=False, output_rev_only_if_longer=False, starting_index=1):
     for rec in SeqIO.parse(open(input_fasta), 'fasta'):
+        ORFs = []
         seq_len = len(rec.seq)
         n, m = len(rec.seq)/3, len(rec.seq)%3
         print >> sys.stderr, "predicting for", rec.id
         # (1a) predict on + strand
         result = defaultdict(lambda: []) # frame --> list of (type, start, end)
         max_angle_predicted_orf_len = min_dumb_aa_length
-        flag, name, good = ORFscores.predict_ORF(rec, bdt, o_all, min_aa_len=min_ANGLE_aa_length)
+        flag, name, good = ORFscores.predict_ORF(rec, bdt, o_all, min_aa_len=min_ANGEL_aa_length)
         #print >> sys.stderr, flag, name, good
         for _frame, _stop, _start in good:
             s = _start * 3 + _frame if _start is not None else _frame
@@ -91,7 +93,7 @@ def ANGLE_predict_worker(input_fasta, output_prefix, bdt, o_all, min_ANGLE_aa_le
             result[_frame].append((flag, s, e))
             max_angle_predicted_orf_len = max(max_angle_predicted_orf_len, (e - s)/3 + 1)
         ORFs.append((rec, result, '+'))
-        # (1b) run dumb ORFs, if better than longest of ANGLE's output it as well
+        # (1b) run dumb ORFs, if better than longest of ANGEL's output it as well
         dumb = DumbORF.predict_longest_ORFs(rec.seq.tostring().upper(), max_angle_predicted_orf_len)
 
         if sum(len(v) for v in dumb.itervalues()) > 0:
@@ -99,34 +101,35 @@ def ANGLE_predict_worker(input_fasta, output_prefix, bdt, o_all, min_ANGLE_aa_le
         # (2a) see if need to predict on - strand
         #      if need to, create a rec2 that has the rev complement
         if use_rev_strand:
+            if output_rev_only_if_longer: # min aa length must be longer than the forward strand longest prediction
+                min_dumb_aa_length = max_angle_predicted_orf_len
+                min_ANGEL_aa_length = max(max_angle_predicted_orf_len, min_ANGEL_aa_length)
             rec2 = SeqRecord(rec.seq.reverse_complement(), id=rec.id, description=rec.description)
             result = defaultdict(lambda: []) # frame --> list of (type, start, end)
             max_angle_predicted_orf_len = min_dumb_aa_length
-            flag, name, good = ORFscores.predict_ORF(rec2, bdt, o_all, min_aa_len=min_ANGLE_aa_length)
+            flag, name, good = ORFscores.predict_ORF(rec2, bdt, o_all, min_aa_len=min_ANGEL_aa_length)
             for _frame, _stop, _start in good:
                 s = _start * 3 + _frame if _start is not None else _frame
                 e = _stop * 3 + _frame + 3 if _stop is not None else n*3 + (_frame if m >= _frame else 0)
                 result[_frame].append((flag, s, e))
-                max_angle_predicted_orf_len = max(max_angle_predicted_orf_len, (e - s)/3 + 1)
+                max_angle_predicted_orf_len = max(max_angle_predicted_orf_len, (e-s)/3+1)
             ORFs.append((rec, result, '-')) # NOTE: sending rec instead of rec2 here is CORRECT
             dumb = DumbORF.predict_longest_ORFs(rec2.seq.tostring().upper(), max_angle_predicted_orf_len)
             if sum(len(v) for v in dumb.itervalues()) > 0:
                 ORFs.append((rec, dumb, '-')) # NOTE: sending rec instead of rec2 here is CORRECT
 
-    write_CDS_n_PEP(ORFs, output_prefix, min_utr_length=50, append_file=True, starting_index=starting_index)
+        starting_index = write_CDS_n_PEP(ORFs, output_prefix, min_utr_length=50, append_file=True, starting_index=starting_index)
 
 
-def distribute_ANGLE_predict(fasta_filename, output_prefix, bdt_pickle_filename, num_workers=5, min_ANGLE_aa_length=50, min_dumb_aa_length=100, use_rev_strand=True):
-    tmpdir = "ANGLE.tmp." + str(int(time.time()))
+def distribute_ANGEL_predict(fasta_filename, output_prefix, bdt_pickle_filename, num_workers=5, min_ANGEL_aa_length=50, min_dumb_aa_length=100, use_rev_strand=False, output_rev_only_if_longer=False):
+    tmpdir = "ANGEL.tmp." + str(int(time.time()))
     os.makedirs(tmpdir)
 
     print >> sys.stderr, "Reading classifer pickle:", bdt_pickle_filename
-    with open(bdt_pickle_filename) as f:
-        bdt = load(f)
-
-    print >> sys.stderr, "Generating background frequencies...."
-    o_all = c_ORFscores.CDSWindowFeat()
-    add_to_background(o_all, SeqIO.parse(open(fasta_filename), 'fasta'))
+    with open(bdt_pickle_filename, 'rb') as f:
+        a = load(f)
+        bdt = a['bdt']
+        o_all = a['o_all']
 
     print >> sys.stderr, "Splitting input into chunks for parallelization...."
     handles = [open(os.path.join(tmpdir, output_prefix+'.split_'+str(i)+'.fa'), 'w') for i in xrange(num_workers)]
@@ -147,7 +150,7 @@ def distribute_ANGLE_predict(fasta_filename, output_prefix, bdt_pickle_filename,
     for i, input_fasta in enumerate(list_of_fasta):
         print >> sys.stderr, "Pool worker for", input_fasta
         starting_index = i * n + 1
-        p = Process(target=ANGLE_predict_worker, args=(input_fasta, input_fasta+'.ANGLE', bdt, o_all, min_ANGLE_aa_length, min_dumb_aa_length, use_rev_strand, starting_index))
+        p = Process(target=ANGEL_predict_worker, args=(input_fasta, input_fasta+'.ANGEL', bdt, o_all, min_ANGEL_aa_length, min_dumb_aa_length, use_rev_strand, output_rev_only_if_longer, starting_index))
         p.start()
         workers.append(p)
 
@@ -155,25 +158,25 @@ def distribute_ANGLE_predict(fasta_filename, output_prefix, bdt_pickle_filename,
         print >> sys.stderr, "waiting for worker", p.name
         p.join()
 
-    cmd = "cat {0} > {1}.ANGLE.cds".format(" ".join(x+'.ANGLE.cds' for x in list_of_fasta), output_prefix)
+    cmd = "cat {0} > {1}.ANGEL.cds".format(" ".join(x+'.ANGEL.cds' for x in list_of_fasta), output_prefix)
     if subprocess.check_call(cmd, shell=True)!=0:
         print >> sys.stderr, "Trouble running command", cmd
         sys.exit(-1)
-    cmd = "cat {0} > {1}.ANGLE.pep".format(" ".join(x+'.ANGLE.pep' for x in list_of_fasta), output_prefix)
+    cmd = "cat {0} > {1}.ANGEL.pep".format(" ".join(x+'.ANGEL.pep' for x in list_of_fasta), output_prefix)
     if subprocess.check_call(cmd, shell=True)!=0:
         print >> sys.stderr, "Trouble running command", cmd
         sys.exit(-1)
-    cmd = "cat {0} > {1}.ANGLE.utr".format(" ".join(x+'.ANGLE.utr' for x in list_of_fasta), output_prefix)
+    cmd = "cat {0} > {1}.ANGEL.utr".format(" ".join(x+'.ANGEL.utr' for x in list_of_fasta), output_prefix)
     if subprocess.check_call(cmd, shell=True)!=0:
         print >> sys.stderr, "Trouble running command", cmd
         sys.exit(-1)
 
-    print >> sys.stderr, "Output written to {0}.ANGLE.cds, {0}.ANGLE.pep, {0}.ANGLE.utr".format(output_prefix)
+    print >> sys.stderr, "Output written to {0}.ANGEL.cds, {0}.ANGEL.pep, {0}.ANGEL.utr".format(output_prefix)
 
     for x in list_of_fasta:
         os.remove(x)
-        os.remove(x + '.ANGLE.cds')
-        os.remove(x + '.ANGLE.pep')
-        os.remove(x + '.ANGLE.utr')
+        os.remove(x + '.ANGEL.cds')
+        os.remove(x + '.ANGEL.pep')
+        os.remove(x + '.ANGEL.utr')
 
     os.removedirs(tmpdir)

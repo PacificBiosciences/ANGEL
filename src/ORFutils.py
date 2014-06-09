@@ -1,6 +1,8 @@
 __author__ = 'lachesis'
 
 import os, sys, subprocess
+from Bio import SeqIO
+
 
 def sanity_check_cdhit():
     if os.system("cd-hit --version")!=256:
@@ -65,6 +67,18 @@ def write_CDS_n_PEP(ORFs, output_prefix, min_utr_length=50, append_file=False, s
     f_cds.close()
     f_pep.close()
     f_utr.close()
+    return index
+
+def selective_write(input_filename, output_filename, selected_ids, append_file=False):
+    """
+    <input_prefix>.cds, .utr, .pep MUST exist!
+    For each of the entries in the above, output to <output_prefix>.cds, .utr, .pep ONLY if in <selected_ids>
+    """
+    f_out = open(output_filename, 'w' if not append_file else 'a')
+    for r in SeqIO.parse(open(input_filename), 'fasta'):
+        if r.id in selected_ids:
+            f_out.write(">{0}\n{1}\n".format(r.description, r.seq))
+    f_out.close()
 
 
 

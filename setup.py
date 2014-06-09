@@ -11,7 +11,7 @@ setup(
         author_email = 'etseng@pacificbiosciences.com',
         license = 'LICENSE.txt',
         ext_modules = ext_modules,
-        scripts = ['dumb_predict.py', 'angel_train.py', 'angel_predict.py'], #TODO
+        scripts = ['dumb_predict.py', 'angel_train.py', 'angel_predict.py', 'angel_make_training_set.py'],
         package_dir = {'Angel': 'src'}, 
         packages = ['Angel'],
         zip_safe = False,

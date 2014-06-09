@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 __author__ = 'etseng@pacificbiosciences.com'
 
-from Angel.SmartORF import ANGLE_training
+from Angel.SmartORF import ANGEL_training
 
 if __name__ == "__main__":
-    #ANGLE_training(cds_filename, utr_filename, output_pickle, num_workers=3
+    #ANGEL_training(cds_filename, utr_filename, output_pickle, num_workers=3
     from argparse import ArgumentParser
     parser = ArgumentParser("Program for training ANGEL classifier")
     parser.add_argument("cds_filename", help="CDS fasta filename to train on")
@@ -14,4 +14,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    ANGLE_training(args.cds_filename, args.utr_filename, args.output_pickle, num_workers=args.cpus)
+    ANGEL_training(args.cds_filename, args.utr_filename, args.output_pickle, num_workers=args.cpus)

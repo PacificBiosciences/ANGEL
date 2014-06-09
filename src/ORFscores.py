@@ -54,7 +54,9 @@ def make_codon_scores(aa_freq, codon_freq):
 def make_data_smart(seq, pseudo, window_size=96, step_size=3, frame_shift=0):
     seq = seq.upper()
     ss = seq[frame_shift:].tostring()
-    aa = seq[frame_shift:].translate().tostring()
+    a, b = len(ss)/3, len(ss)%3
+    aa_seq_end = a * 3 + frame_shift if frame_shift <= b else frame_shift-3
+    aa = seq[frame_shift:aa_seq_end].translate().tostring()
     aa_window_size = window_size / 3 
     n = len(ss)
     
@@ -246,11 +248,11 @@ def predict_ORF(rec, bdt, o_all, min_aa_len=200):
         good = []
         for _frame,_end,_begin in chunks:
             e_start, e_stop = extend_in_frame(_begin, _end, start_dict[_frame], stop_dict[_frame], (len(rec.seq)-_frame)/3)
-            if e_stop is not None:
-                e_start2 = 0 if e_start is None else e_start
-                e_len = e_stop - e_start2 + 1
-                if e_len >= min_aa_len and sum(ans[_frame][e_start2:e_stop]) >= .5 * e_len:
-                    good.append((_frame, e_stop, e_start))
+            e_start2 = 0 if e_start is None else e_start
+            e_stop2 = (len(rec.seq)-_frame) / 3 if e_stop is None else e_stop
+            e_len = e_stop2 - e_start2 + 1
+            if e_len >= min_aa_len and sum(ans[_frame][e_start2:e_stop2]) >= .5 * e_len:
+                good.append((_frame, e_stop, e_start))
         if len(good) == 1:
             #print "single good for", rec.id, good[0]
             return "likely-NA", rec.id, good
