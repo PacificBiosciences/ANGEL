@@ -1,5 +1,7 @@
 ANGEL: Robust Open Reading Frame prediction
 =====
+Last Updated: 6/9/2014
+
 
 The program is divided into three parts :
 
@@ -41,26 +43,46 @@ The usage is:
 
 ```
 dumb_predict.py <fasta_filename> <output_prefix> 
-       [--use_top USE_TOP] [--min_aa_length MIN_AA_LENGTH]
+       [--min_aa_length MIN_AA_LENGTH]
        [--use_rev_strand] [--cpus CPUS]
 ```
 
-We will use the provided training example below. For runtime purpose, we set `--use_top` to 50 here but for proper training we would recommend setting to 500. By default, only the forward strand is used. This is especially true for PacBio transcriptome sequencing output that often already has correct strand.
+We will use the provided training example below. By default, only the forward strand is used. This is especially true for PacBio transcriptome sequencing output that often already has correct strand.
 
 ```
 cd ANGEL/training_example
-dumb_predict.py test.human_1000seqs.fa test.human --use_top 50 --min_aa_length 300 --cpus 24
+dumb_predict.py test.human_1000seqs.fa test.human.dumb --min_aa_length 300 --cpus 24
 ```
 
-The output consists of:
+The output consists of *test.human.dumb.final.pep*, *test.human.dumb.final.cds* and *test.human.dumb.final.utr*, which are the results of longest ORF prediction.
 
-test.human.pep, test.human.cds, test.human.utr: which are the results of longest ORF prediction
-test.human.training_50.cds, test.human.training_50.utr: which are the top 50 non-redundant CDS/UTR sequences that can be used as training data for ANGEL classifier 
+#### Creating a non-redundant training dataset
+
+Redundancy in the training dataset, such as highly identical CDS sequences from alternative isoforms or homologous genes, can skew the classifier training. The script `angel_make_training_set.py` clusters an input set of CDS sequences into non-redundant clusters and outputs a selective subset for training data.
+
+Note that the training dataset does not have to be the same as the input to ANGEL ORF prediction below. You can use any curated dataset like Gencode, RefSeq, or another dataset so long as they are from the same or similar species so the classifier can be trained properly.
+
+The usage is:
+
+```
+angel_make_training_set.py <input_prefix> <output_prefix>
+     [--use_top USE_TOP] [--random] [--cpus CPUS]
+```
+
+Using the output from dumb ORF prediction above, the command is:
+
+```
+angel_make_training_set.py test.human.dumb.final test.human.dumb.final.training --random --cpus 24
+```
+
+Here we use the `--random` parameter to randomly select non-redundant CDS sequences, instead of choosing the longest CDS sequences.
+
 
 
 #### ANGEL classifer training
 
-`angel_train.py` takes a CDS fasta file and a UTR fasta file and outputs a trained classifier pickle file. Note that the training dataset does not have to be the same as the input to ANGEL ORF prediction below. You can use any curated dataset like Gencode, RefSeq, or another dataset so long as they are from the same or similar species so the classifier can be trained properly.
+
+`angel_train.py` takes a CDS fasta file and a UTR fasta file and outputs a trained classifier pickle file. 
 
 The usage is:
 
@@ -71,12 +93,12 @@ angel_train.py <cds_filename> <utr_filename> <output_pickle> [--cpus CPUS]
 For example:
 
 ```
-cd ANGEL/training_example
-angel_train.py test.human.training_50.cds test.human.training_50.utr \
-      test.human.training_50.classifier.pickle --cpus 24
+angel_train.py test.human.dumb.final.training.cds test.human.dumb.final.training.utr \
+      test.human.dumb.final.classifier.pickle --cpus 24
 ```
 
-On a typical 500-sequence training dataset, the training may take several hours. The human MCF-7 training set took 4 hours on a 24-core machine.
+On a typical 500-sequence training dataset, the training may take several hours. The 500-sequence human MCF-7 training set took 4 hours on a 24-core machine.
+
 
 
 #### ANGEL ORF prediction
@@ -85,7 +107,9 @@ The usage is:
 
 ```
 angel_predict.py <input_fasta> <classifier_pickle> <output_prefix>
-       [--min_angel_aa_length] [--min_dumb_aa_length] [--use_rev_strand] [--cpus]
+       [--min_angel_aa_length] [--min_dumb_aa_length] 
+       [--use_rev_strand] [--output_rev_only_if_longer] 
+       [--cpus]
 ```
 
 For each sequence, ANGEL uses the classifer to predict the coding potential of each codon in each of the three frames then finds the most likely stretch of window that is the open reading frame. It then does the following:
@@ -96,17 +120,17 @@ For each sequence, ANGEL uses the classifer to predict the coding potential of e
 
 The longest ORF length from the ANGEL process is recorded as *T*. Then, the same dumb ORF prediction (which simply looks for the longest stretch of ORF without stop codon interruption) is done on the forward three frames. Each predicted dumb ORF is also outputted if and only if its length is greater than both *T* and `min_dumb_aa_length`. This is a fallback process in case the ANGEL classifier failed to detect coding potential in the CDS region.
 
-If `--use_rev_strand` is given, then the same process is repeated on the reverse-complement of the sequence.
+If `--use_rev_strand` is given, then the same process is repeated on the reverse-complement of the sequence. If `--output_rev_only_if_longer` is given, then the reverse strand ORF is output only if it is longer than the longest ORF from the forward strand.
 
 
 For example:
 
 ```
 angel_predict.py test.human_1000seqs.fa test.human.training_50.classifier.pickle test.human \
-      --use_rev_strand --min_dumb_aa_length 300
+      --use_rev_strand --output_rev_only_if_longer --min_dumb_aa_length 300
 ```
 
-The output files are: <output_prefix>.ANGLE.cds, <output_prefix>.ANGLE.pep, <output_prefix>.ANGLE.utr.
+The output files are: <output_prefix>.ANGEL.cds, <output_prefix>.ANGEL.pep, <output_prefix>.ANGEL.utr.
 
 Each output sequence ID has the format:
 ```
