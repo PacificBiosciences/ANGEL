@@ -1,7 +1,7 @@
 ANGEL: Robust Open Reading Frame prediction
 =====
 
-The program is divided into three parts:
+The program is divided into three parts :
 
 -- dumb ORF prediction: ORF prediction that outputs all longest ORFs in all frames. Can be used to create a top training dataset.
 
