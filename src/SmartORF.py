@@ -28,6 +28,7 @@ def add_data_worker(o_all, records, frames, queue):
             print >> sys.stderr, "putting into queue", rec.id
             queue.put(stuff)
             print >> sys.stderr, "done for ", rec.id
+    print >> sys.stderr, "Done with records"
 
 def get_data_parallel(o_all, records, frames, num_workers):
     data = []
@@ -98,16 +99,27 @@ def ANGEL_predict_worker(input_fasta, output_prefix, bdt, o_all, min_ANGEL_aa_le
 
         if sum(len(v) for v in dumb.itervalues()) > 0:
             ORFs.append((rec, dumb, '+'))
+            for v in dumb.itervalues():
+                if len(v) > 0:
+                    for _flag, _s, _e in v:
+                        max_angle_predicted_orf_len = max(max_angle_predicted_orf_len, (_e - _s)/3 + 1)
+
         # (2a) see if need to predict on - strand
         #      if need to, create a rec2 that has the rev complement
         if use_rev_strand:
+            #print "output_rev_only_if_longer:", output_rev_only_if_longer
             if output_rev_only_if_longer: # min aa length must be longer than the forward strand longest prediction
-                min_dumb_aa_length = max_angle_predicted_orf_len
-                min_ANGEL_aa_length = max(max_angle_predicted_orf_len, min_ANGEL_aa_length)
+                min_dumb_aa_length_for_rev = max_angle_predicted_orf_len
+                min_ANGEL_aa_length_for_rev = max(max_angle_predicted_orf_len, min_ANGEL_aa_length)
+            else:
+                min_dumb_aa_length_for_rev = min_dumb_aa_length
+                min_ANGEL_aa_length_for_rev = min_ANGEL_aa_length
+                #print min_dumb_aa_length, min_ANGEL_aa_length
             rec2 = SeqRecord(rec.seq.reverse_complement(), id=rec.id, description=rec.description)
             result = defaultdict(lambda: []) # frame --> list of (type, start, end)
-            max_angle_predicted_orf_len = min_dumb_aa_length
-            flag, name, good = ORFscores.predict_ORF(rec2, bdt, o_all, min_aa_len=min_ANGEL_aa_length)
+            max_angle_predicted_orf_len = min_dumb_aa_length_for_rev
+            #print "calling rev with min_aa_len", min_ANGEL_aa_length
+            flag, name, good = ORFscores.predict_ORF(rec2, bdt, o_all, min_aa_len=min_ANGEL_aa_length_for_rev)
             for _frame, _stop, _start in good:
                 s = _start * 3 + _frame if _start is not None else _frame
                 e = _stop * 3 + _frame + 3 if _stop is not None else n*3 + (_frame if m >= _frame else 0)
@@ -132,16 +144,18 @@ def distribute_ANGEL_predict(fasta_filename, output_prefix, bdt_pickle_filename,
         o_all = a['o_all']
 
     print >> sys.stderr, "Splitting input into chunks for parallelization...."
-    handles = [open(os.path.join(tmpdir, output_prefix+'.split_'+str(i)+'.fa'), 'w') for i in xrange(num_workers)]
     total_seqs = 0
     for r in SeqIO.parse(open(fasta_filename), 'fasta'): total_seqs += 1
+    num_workers = min(num_workers, total_seqs)
     num_seqs_per_worker = total_seqs / num_workers + 1
+    handles = [open(os.path.join(tmpdir, output_prefix+'.split_'+str(i)+'.fa'), 'w') for i in xrange(num_workers)]
     i = 0
     for r in SeqIO.parse(open(fasta_filename), 'fasta'):
         f = handles[i/num_seqs_per_worker]
         f.write(">{0}\n{1}\n".format(r.id, r.seq))
         i += 1
     for f in handles: f.close()
+    handles = filter(lambda f: os.stat(f.name).st_size > 0, handles)
 
     list_of_fasta = [ f.name for f in handles ]
 
@@ -173,10 +187,10 @@ def distribute_ANGEL_predict(fasta_filename, output_prefix, bdt_pickle_filename,
 
     print >> sys.stderr, "Output written to {0}.ANGEL.cds, {0}.ANGEL.pep, {0}.ANGEL.utr".format(output_prefix)
 
-    for x in list_of_fasta:
-        os.remove(x)
-        os.remove(x + '.ANGEL.cds')
-        os.remove(x + '.ANGEL.pep')
-        os.remove(x + '.ANGEL.utr')
+#    for x in list_of_fasta:
+#        os.remove(x)
+#        os.remove(x + '.ANGEL.cds')
+#        os.remove(x + '.ANGEL.pep')
+#        os.remove(x + '.ANGEL.utr')
 
-    os.removedirs(tmpdir)
+#    os.removedirs(tmpdir)

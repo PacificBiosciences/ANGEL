@@ -236,7 +236,7 @@ def predict_ORF(rec, bdt, o_all, min_aa_len=200):
             #return "confident-3partial", rec.id, [(_frame, e_stop, e_start)]
         elif e_start is None or e_start not in start_dict[_frame]:
             flag = "confident-5partial"
-            aa_len = e_stop + 1
+            aa_len = e_stop + 1 if e_start is None else (e_stop-e_start+1)
             #return 'confident-5partial', rec.id, [(_frame, e_stop, e_start)]
         else:
             flag = "confident-complete"
