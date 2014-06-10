@@ -36,7 +36,7 @@ python setup.py install
 
 #### Dumb ORF prediction
 
-`dumb_predict.py` takes as input a fasta file and outputs all longest ORFs (could be overlapping) that exceed the user-defined minimum length. In addition, it uses [CD-HIT](http://www.bioinformatics.org/cd-hit/) to remove redundancy to create a "top training set" for ANGEL classifier training. 
+`dumb_predict.py` takes as input a fasta file and outputs all longest ORFs (could be overlapping) that exceed the user-defined minimum length and has a positive log-odds scores based on hexamer frequencies. 
 
 
 The usage is:
@@ -77,6 +77,7 @@ angel_make_training_set.py test.human.dumb.final test.human.dumb.final.training 
 
 Here we use the `--random` parameter to randomly select non-redundant CDS sequences, instead of choosing the longest CDS sequences.
 
+The output files are: *test.human.dumb.final.training.cds*, *test.human.dumb.final.training.utr* and *test.human.dumb.final.training.pep*.
 
 
 #### ANGEL classifer training
