@@ -127,8 +127,8 @@ If `--use_rev_strand` is given, then the same process is repeated on the reverse
 For example:
 
 ```
-angel_predict.py test.human_1000seqs.fa test.human.training_50.classifier.pickle test.human \
-      --use_rev_strand --output_rev_only_if_longer --min_dumb_aa_length 300
+angel_predict.py test.human_1000seqs.fa human.MCF7.random_500_for_training.pickle test.human \
+      --use_rev_strand --output_rev_only_if_longer --min_dumb_aa_length 100
 ```
 
 The output files are: <output_prefix>.ANGEL.cds, <output_prefix>.ANGEL.pep, <output_prefix>.ANGEL.utr.
