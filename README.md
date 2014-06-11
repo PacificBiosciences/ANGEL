@@ -22,7 +22,7 @@ You need to install [CD-HIT](http://www.bioinformatics.org/cd-hit/) and have it 
 ## INSTALLATION
 We recommend that you set up and activate a virtual environment before installation. See [here](https://github.com/PacificBiosciences/cDNA_primer/wiki/Setting-up-virtualenv-and-installing-pbtranscript-tofu) for installation details.
 
-You can download this GitHub repository in many ways. Here we assume you will be using git clone:
+You can download this GitHub repository in many ways. Here we assume you will be using ``git clone``:
 
 ```
 git clone https://github.com/Magdoll/ANGEL.git
@@ -36,7 +36,7 @@ python setup.py install
 
 #### Dumb ORF prediction
 
-`dumb_predict.py` takes as input a FASTA file. It outputs all longest ORFs (which could be overlapping) that exceed the user-defined minimum length and has a positive log-odds scores based on hexamer frequencies. 
+`dumb_predict.py` takes as input a FASTA file. It outputs all longest ORFs (which could be overlapping) that exceed the user-defined minimum length and have a positive log-odds scores based on hexamer frequencies. 
 
 
 Usage:
