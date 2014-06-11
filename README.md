@@ -54,7 +54,7 @@ cd ANGEL/training_example
 dumb_predict.py test.human_1000seqs.fa test.human.dumb --min_aa_length 300 --cpus 24
 ```
 
-The output consists of *test.human.dumb.final.pep*, *test.human.dumb.final.cds* and *test.human.dumb.final.utr*, which are the results of longest ORF prediction.
+The output consists of **test.human.dumb.final.pep**, **test.human.dumb.final.cds** and **test.human.dumb.final.utr**, which are the results of longest ORF prediction.
 
 #### Creating a non-redundant training dataset
 
