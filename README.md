@@ -91,7 +91,7 @@ Usage:
 angel_train.py <cds_filename> <utr_filename> <output_pickle> [--cpus CPUS]
 ```
 
-For example:
+Example:
 
 ```
 angel_train.py test.human.dumb.final.training.cds test.human.dumb.final.training.utr \
@@ -114,32 +114,34 @@ angel_predict.py <input_fasta> <classifier_pickle> <output_prefix>
 
 For each sequence, ANGEL uses the classifer to predict the coding potential of each codon in each of the three frames, then finds the most likely stretch of window that is the open reading frame. It then does the following:
 
-* If there is only one predicted ORF, tag it as "confident". In this case, it is unlikely there are sequencing errors.
-* If there are multiple ORFs but only one exceeds `min_angel_aa_length` threshold, output that one ORF and tag it as "likely". In this case, the program is semi-positive that there are no sequencing errors or that the error occurs at the ends of the CDS, allowing successful prediction of a relatively long continuous ORF.
-* If there are multiple ORFs (could be in multiple frames) exceeding the length threshold, output all of them and tag them as "suspicious". In this case, the ORFs could be genuine complete ORFs (indicating a polycistronic transcript or alternative ORFs) or fragments of the same ORF that has frame shift due to uncorrected sequencing errors.
+* If there is only one predicted ORF, tag it as ``confident``. In this case, it is unlikely there are sequencing errors.
+* If there are multiple ORFs but only one exceeds `min_angel_aa_length` threshold, output that one ORF and tag it as ``likely``. In this case, the program is semi-positive that there are no sequencing errors or that the error occurs at the ends of the CDS, allowing successful prediction of a relatively long continuous ORF.
+* If there are multiple ORFs (which could be in multiple frames) exceeding the length threshold, output all of them and tag them as ``suspicious``. In this case, the ORFs could be genuine complete ORFs (indicating a polycistronic transcript or alternative ORFs) or fragments of the same ORF that has frame shift due to uncorrected sequencing errors.
 
-The longest ORF length from the ANGEL process is recorded as *T*. Then, the same dumb ORF prediction (which simply looks for the longest stretch of ORF without stop codon interruption) is done on the forward three frames. Each predicted dumb ORF is also outputted if, and only if, its length is greater than both *T* and `min_dumb_aa_length`. This is a fallback process in case the ANGEL classifier failed to detect coding potential in the CDS region.
+The longest ORF length from the ANGEL process is recorded as ``T``. Then, the same dumb ORF prediction (which simply looks for the longest stretch of ORF without stop codon interruption) is done on the forward three frames. Each predicted dumb ORF is also outputted if, and only if, its length is greater than both ``T`` and `min_dumb_aa_length`. This is a fallback process in case the ANGEL classifier failed to detect coding potential in the CDS region.
 
 If `--use_rev_strand` is used, then the same process is repeated on the reverse-complement of the sequence. 
+
 If `--output_rev_only_if_longer` is used, then the reverse strand ORF is output only if it is longer than the longest ORF from the forward strand.
 
 
-For example:
+Example:
 
 ```
 angel_predict.py test.human_1000seqs.fa human.MCF7.random_500_for_training.pickle test.human \
       --use_rev_strand --output_rev_only_if_longer --min_dumb_aa_length 100
 ```
 
-The output files are: <output_prefix>.ANGEL.cds, <output_prefix>.ANGEL.pep, <output_prefix>.ANGEL.utr.
+The output files are: ``<output_prefix>.ANGEL.cds``, ``<output_prefix>.ANGEL.pep``, and ``<output_prefix>.ANGEL.utr``.
 
 Each output sequence ID has the format:
 ```
 <seq_id> type:<tag>-<completeness> len:<ORF length (aa)> strand:<strand> pos:<CDS range>
 ```
 
-Where *tag* is "confident", "likely", or "suspicious" for ANGEL predictions, and "dumb" for dumb ORF predictions.
-*completeness* is either "complete", "5partial", "3partial", or "internal" based on the presence or absence of start and stop codons.
+Where ``tag`` is ``confident``, ``likely``, or ``suspicious`` for ANGEL predictions, and ``dumb`` for dumb ORF predictions.
+
+``completeness`` is either ``complete``, ``5partial``, ``3partial``, or ``internal`` based on the presence or absence of start and stop codons.
 
 
 ## LICENSE
