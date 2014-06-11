@@ -12,7 +12,7 @@ The program is divided into three parts :
 * **ANGEL robust ORF prediction**: ORF prediction based on both the ANGEL classifier and the dumb ORF prediction.
 
 
-The ANGEL classifer is based on the classifer described in the Shimizu *et al.*, "**ANGLE: a sequencing errors resistant program for predicting protein coding regions in unfinished cDNA.**", *J Bioinform Comput Biol*, (2006). The naming change to ANGEL is intentional to disambiguate from the author implementation of ANGLE.
+The ANGEL classifer is based on the classifer described in Shimizu *et al.*, "**ANGLE: a sequencing errors resistant program for predicting protein coding regions in unfinished cDNA.**", *J Bioinform Comput Biol*, (2006). The naming change to ANGEL is intentional to differentiate it from the author implementation of ANGLE.
 
 
 ## SOFTWARE REQUIREMENT
