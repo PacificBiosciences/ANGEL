@@ -18,6 +18,21 @@ The ANGEL classifer is based on the classifer described in the Shimizu *et al.*,
 ## SOFTWARE REQUIREMENT
 You will need to install [CD-HIT](http://www.bioinformatics.org/cd-hit/) and have it available in your $PATH variable to run dumb ORF prediction.
 
+## PYTHON PREREQUISITE
+
+The python dependencies for ANGEL are:
+* numpy
+* Biopython
+* scikit-learn
+
+You can install them via the following commands (NOTE: it is recommended that you activate your virtual environment first):
+
+```
+pip install numpy
+pip install biopython
+pip install scikit-learn
+```
+
 
 ## INSTALLATION
 It is recommended that you set up and activate a virtual environment before installation. See [here](https://github.com/PacificBiosciences/cDNA_primer/wiki/Setting-up-virtualenv-and-installing-pbtranscript-tofu) howto.
@@ -31,6 +46,7 @@ python setup.py build
 python setup.py install
 ```
 
+You can skip `pip install scikit-learn` f you 
 
 ## USAGE
 
