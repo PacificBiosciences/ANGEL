@@ -1,6 +1,6 @@
 ANGEL: Robust Open Reading Frame prediction
 =====
-Last Updated: 6/11/2014
+Last Updated: 6/19/2014
 
 
 The program is divided into three parts :
@@ -13,6 +13,8 @@ The program is divided into three parts :
 
 
 The ANGEL classifer is based on the classifer described in Shimizu *et al.*, "**ANGLE: a sequencing errors resistant program for predicting protein coding regions in unfinished cDNA.**", *J Bioinform Comput Biol*, (2006). The naming change to ANGEL is intentional to differentiate it from the author implementation of ANGLE.
+
+**NOTE**: for both dumb and ANGEL ORF prediction, it is recommended that the input sequences have at least 99% accuracy. This means either short read assembled transcripts or for PacBio, the output from running the [Iso-Seq pipeline](https://github.com/PacificBiosciences/cDNA_primer/). ANGEL has not been tested on PacBio subread-level or ReadsOfInsert-level sequences.
 
 
 ## SOFTWARE REQUIREMENT
