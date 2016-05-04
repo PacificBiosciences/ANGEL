@@ -14,6 +14,8 @@ from Angel.ORFutils import write_CDS_n_PEP
 
 sys.modules['c_ORFscores'] = Angel.c_ORFscores # need this for unpickling to work
 
+MAX_RECORD_CHUNK = 100
+
 def add_to_background(o_all, records):
     for r in records:
         o_all.calc_codon_count(r.seq.tostring().upper(), len(r.seq))
@@ -22,13 +24,18 @@ def add_to_background(o_all, records):
         o_all.calc_diamino_count(aa, len(aa))
 
 def add_data_worker(o_all, records, frames, queue):
+    #result = []
     for rec in records:
         for i in frames:
+            print >> sys.stderr, "processing record {0}, frame {1}".format(rec.id, i)
             stuff = ORFscores.make_data_smart(rec.seq, o_all, frame_shift=i)
             print >> sys.stderr, "putting into queue", rec.id
             queue.put(stuff)
+            #result += stuff
             print >> sys.stderr, "done for ", rec.id
     print >> sys.stderr, "Done with records"
+    #with open(filename, 'w') as f:
+    #    dump(result, f)
 
 def get_data_parallel(o_all, records, frames, num_workers):
     data = []
@@ -36,16 +43,41 @@ def get_data_parallel(o_all, records, frames, num_workers):
     queue = Queue()
     bin_size = len(records) / num_workers + 1
     for i in xrange(num_workers):
+        #filename = "tmp.{0}.pickle".format(i)
+        #p = Process(target=add_data_worker, args=(o_all, records[bin_size*i:bin_size*(i+1)], frames, queue, filename))
         p = Process(target=add_data_worker, args=(o_all, records[bin_size*i:bin_size*(i+1)], frames, queue))
-        p.start()
         workers.append(p)
 
-    print >> sys.stderr, "waiting for workers to finish...."
-    for i in xrange(len(records)*len(frames)):
+    print >> sys.stderr, "launching all workers"
+    for p in workers:
+        print >> sys.stderr, "launching worker", p.name
+        p.start()
+
+    time.sleep(10) # simply wait 30 sec
+    # print >> sys.stderr, "waiting for workers to finish...."
+    total = len(records)*len(frames)
+    fail_count = 0
+    for i in xrange(total):
+        obj = queue.get(timeout=60)
+        if obj is not None:
+            data += obj
+        else:
+            print >> sys.stderr, "record {0} of {1} waittime exceeded! give up!".format(i, total)
+            fail_count += 1
+        if fail_count > 10:
+            print >> sys.stderr, "failed waittime more than 10 times. stop!"
+            break
+
+    # must purge everything in queue
+    while not queue.empty():
         data += queue.get()
+
+    print >> sys.stderr, "purged queue. now can join workers."
+
     for p in workers:
         p.join()
     print >> sys.stderr, "all workers done!"
+
     print >> sys.stderr, "retrieved {0} data items".format(len(data))
     return data
 
@@ -58,8 +90,23 @@ def ANGEL_training(cds_filename, utr_filename, output_pickle, num_workers=3):
     add_to_background(o_all, coding)
     add_to_background(o_all, utr)
 
+    # Queue is very inefficient for large data passing
+    # instead break the records up into chunk sizes and just combine results together
+    print >> sys.stderr, "running get_data_parallel for coding, chunk 0"
     data_pos = get_data_parallel(o_all, coding, [0], num_workers)
     data_neg = get_data_parallel(o_all, utr, [0, 1, 2], num_workers)
+#    num_coding = len(coding)
+#    data_pos = get_data_parallel(o_all, coding[:MAX_RECORD_CHUNK], [0], num_workers)
+#    for i in xrange(1, num_coding/MAX_RECORD_CHUNK + (num_coding%MAX_RECORD_CHUNK>0)):
+#        print >> sys.stderr, "running get_data_parallel for coding, chunk", i
+#        data_pos += get_data_parallel(o_all, coding[i*MAX_RECORD_CHUNK:(i+1)*MAX_RECORD_CHUNK], [0], num_workers)##
+#
+#    print >> sys.stderr, "running get_data_parallel for UTR, chunk 0"
+#    num_utr = len(utr)
+#    data_neg = get_data_parallel(o_all, utr[:MAX_RECORD_CHUNK], [0, 1, 2], num_workers)
+#    for i in xrange(1, num_utr/MAX_RECORD_CHUNK + (num_utr%MAX_RECORD_CHUNK>0)):
+#        print >> sys.stderr, "running get_data_parallel for UTR, chunk", i
+#        data_neg += get_data_parallel(o_all, utr[i*MAX_RECORD_CHUNK:(i+1)*MAX_RECORD_CHUNK], [0, 1, 2], num_workers)
 
     data = data_neg + data_pos
     target = [0]*len(data_neg) + [1]*len(data_pos)
