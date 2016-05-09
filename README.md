@@ -1,10 +1,13 @@
 ANGEL: Robust Open Reading Frame prediction
 =====
 
-**Latest News**: (06.27.2014)  See this talk on validating PacBio transcript-based ORF predictions with mass spec data! ANGEL was used for creating the set of ORF predictions from the MCF-7 dataset. [G. Sheynkman: Building a "perfect" proteomics database using PacBio MCF-7 transcriptome data](https://vimeo.com/99358676)
+**Latest News**: 
+(05.09.2016) Updated instructions on installing dependencies. Now recommend using Anaconda.
+
+(06.27.2014)  See this talk on validating PacBio transcript-based ORF predictions with mass spec data! ANGEL was used for creating the set of ORF predictions from the MCF-7 dataset. [G. Sheynkman: Building a "perfect" proteomics database using PacBio MCF-7 transcriptome data](https://vimeo.com/99358676)
 
 
-Last Updated: 6/19/2014
+Last Updated: 5/9/2016
 
 
 The program is divided into three parts :
@@ -31,7 +34,66 @@ The python dependencies for ANGEL are:
 * Biopython
 * scikit-learn
 
-You can install them via the following commands (NOTE: it is recommended that you activate your virtual environment first):
+
+You can install them using several ways, but the most recommended one is using package manager Anaconda (similar to what is done for [Cogent](https://github.com/Magdoll/Cogent/wiki/Installing-Cogent)).
+
+In fact, if you already have [Cogent](https://github.com/Magdoll/Cogent/wiki/Installing-Cogent) installed, the only thing you need to do is activate the environment and install `scikit-learn`.
+
+### Option 1: Install ANGEL using Anaconda
+
+We will first install Anaconda and create a virtualenv under it. The install directions are the same as those for Cogent, so I'm naming the environment `AnaCogent` as well.
+
+
+(1) [Download](https://www.continuum.io/downloads) Anaconda latest version.
+
+(2) Install Anaconda according to [tutorial](http://docs.continuum.io/anaconda/install#linux-install)
+```
+bash ~/Downloads/Anaconda3-2.4.0-Linux-x86_64.sh
+export PATH=$HOME/anaconda2/bin:$PATH
+```
+
+For the `export` line, you may want to add them to `.bashrc` or `.bash_profile` in your home directory. Otherwise you will need to type it everytime you log in.
+
+
+(3) Confirm conda is installed and update conda
+```
+conda -V
+conda update conda
+```
+
+(4) Create a virtual environment ([tutorial](http://uoa-eresearch.github.io/eresearch-cookbook/recipe/2014/11/20/conda/)). I will call it `anaCogent`. Type `y` to agree to the interactive questions.
+```
+conda create -n anaCogent python=2.7 anaconda
+source activate anaCogent
+```
+
+Once you have activated the virtualenv, you should see your prompt changing to something like this:
+
+```
+(anaCogent)-bash-4.1$
+```
+
+(5) Install additional libraries that we need
+```
+conda install -n anaCogent biopython
+conda install -n anaCogent scikit-learn
+```
+
+(6) Clone ANGEL repo and install
+```
+git clone https://github.com/Magdoll/ANGEL.git
+cd ANGEL
+python setup.py build
+python setup.py install
+```
+
+
+
+### Option 2: Install ANGEL using virtualenv
+
+The alternative to Anaconda is to set up and activate a virtual environment before installation. See [here](https://github.com/PacificBiosciences/cDNA_primer/wiki/Setting-up-virtualenv-and-installing-pbtranscript-tofu) for installation details.
+
+Once you have the virtualenv activated, install the dependencies using `pip`:
 
 ```
 pip install numpy
@@ -39,9 +101,6 @@ pip install biopython
 pip install scikit-learn
 ```
 
-
-## INSTALLATION
-We recommend that you set up and activate a virtual environment before installation. See [here](https://github.com/PacificBiosciences/cDNA_primer/wiki/Setting-up-virtualenv-and-installing-pbtranscript-tofu) for installation details.
 
 You can download this GitHub repository in many ways. Here we assume you will be using ``git clone``:
 
@@ -52,7 +111,7 @@ python setup.py build
 python setup.py install
 ```
 
-You can skip `pip install scikit-learn` f you 
+
 
 ## USAGE
 
