@@ -19,7 +19,7 @@ The program is divided into three parts :
 * **ANGEL robust ORF prediction**: ORF prediction based on both the ANGEL classifier and the dumb ORF prediction.
 
 
-The ANGEL classifer is based on the classifer described in Shimizu *et al.*, "**ANGLE: a sequencing errors resistant program for predicting protein coding regions in unfinished cDNA.**", *J Bioinform Comput Biol*, (2006). The naming change to ANGEL is intentional to differentiate it from the author implementation of ANGLE.
+The ANGEL classifier is based on the classifier described in Shimizu *et al.*, "**ANGLE: a sequencing errors resistant program for predicting protein coding regions in unfinished cDNA.**", *J Bioinform Comput Biol*, (2006). The naming change to ANGEL is intentional to differentiate it from the author implementation of ANGLE.
 
 **NOTE**: for both dumb and ANGEL ORF prediction, it is recommended that the input sequences have at least 99% accuracy. This means either short read assembled transcripts or for PacBio, the output from running the [Iso-Seq pipeline](https://github.com/PacificBiosciences/cDNA_primer/) which are Quiver-polished high-quality consensus sequences. ANGEL has not been tested on PacBio subread-level or ReadsOfInsert-level sequences.
 
@@ -161,7 +161,7 @@ Here we use the `--random` parameter to randomly select non-redundant CDS sequen
 The output files are: ``test.human.dumb.final.training.cds``, ``test.human.dumb.final.training.utr`` and ``test.human.dumb.final.training.pep``.
 
 
-#### ANGEL classifer training
+#### ANGEL classifier training
 
 
 `angel_train.py` takes a CDS FASTA file and a UTR FASTA file and outputs a trained classifier pickle file. 
@@ -193,7 +193,7 @@ angel_predict.py <input_fasta> <classifier_pickle> <output_prefix>
        [--cpus]
 ```
 
-For each sequence, ANGEL uses the classifer to predict the coding potential of each codon in each of the three frames, then finds the most likely stretch of window that is the open reading frame. It then does the following:
+For each sequence, ANGEL uses the classifier to predict the coding potential of each codon in each of the three frames, then finds the most likely stretch of window that is the open reading frame. It then does the following:
 
 * If there is only one predicted ORF, tag it as ``confident``. In this case, it is unlikely there are sequencing errors.
 * If there are multiple ORFs but only one exceeds `min_angel_aa_length` threshold, output that one ORF and tag it as ``likely``. In this case, the program is semi-positive that there are no sequencing errors or that the error occurs at the ends of the CDS, allowing successful prediction of a relatively long continuous ORF.
