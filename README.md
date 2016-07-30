@@ -176,10 +176,12 @@ Example:
 
 ```
 angel_train.py test.human.dumb.final.training.cds test.human.dumb.final.training.utr \
-      test.human.dumb.final.classifier.pickle --cpus 24
+      test.human.dumb.final.classifier.pickle --cpus 12
 ```
 
-On a typical 500-sequence training dataset, the training may take several hours. The 500-sequence human MCF-7 training set took 4 hours on a 24-core machine.
+On a typical 500-sequence training dataset, the training may take several hours. 
+
+**NOTE** I have found that sometimes `angel_train.py` hangs if you use more than 12 cores (regardless of memory usage), possibly due to issues with Python's multiprocessing. 
 
 
 #### ANGEL ORF prediction
