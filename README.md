@@ -7,7 +7,9 @@ ANGEL: Robust Open Reading Frame prediction
 (06.27.2014)  See this talk on validating PacBio transcript-based ORF predictions with mass spec data! ANGEL was used for creating the set of ORF predictions from the MCF-7 dataset. [G. Sheynkman: Building a "perfect" proteomics database using PacBio MCF-7 transcriptome data](https://vimeo.com/99358676)
 
 
-Last Updated: 5/9/2016
+Last Updated: 08/03/2016
+
+Current version: 2.0
 
 
 The program is divided into three parts :
@@ -191,7 +193,7 @@ Usage:
 ```
 angel_predict.py <input_fasta> <classifier_pickle> <output_prefix>
        [--min_angel_aa_length] [--min_dumb_aa_length] 
-       [--use_rev_strand] [--output_rev_only_if_longer] 
+       [--use_rev_strand] [--output_mode [best,all]]
        [--cpus]
 ```
 
@@ -201,18 +203,23 @@ For each sequence, ANGEL uses the classifier to predict the coding potential of 
 * If there are multiple ORFs but only one exceeds `min_angel_aa_length` threshold, output that one ORF and tag it as ``likely``. In this case, the program is semi-positive that there are no sequencing errors or that the error occurs at the ends of the CDS, allowing successful prediction of a relatively long continuous ORF.
 * If there are multiple ORFs (which could be in multiple frames) exceeding the length threshold, output all of them and tag them as ``suspicious``. In this case, the ORFs could be genuine complete ORFs (indicating a polycistronic transcript or alternative ORFs) or fragments of the same ORF that has frame shift due to uncorrected sequencing errors.
 
-The longest ORF length from the ANGEL process is recorded as ``T``. Then, the same dumb ORF prediction (which simply looks for the longest stretch of ORF without stop codon interruption) is done on the forward three frames. Each predicted dumb ORF is also outputted if, and only if, its length is greater than both ``T`` and `min_dumb_aa_length`. This is a fallback process in case the ANGEL classifier failed to detect coding potential in the CDS region.
+The longest ORF length from the ANGEL process is recorded as ``T``. Then, the same dumb ORF prediction (which simply looks for the longest stretch of ORF without stop codon interruption) is done on the forward three frames. The longest predicted dumb ORF is also outputted if, and only if, its length is greater than both ``T`` and `min_dumb_aa_length`. This is a fallback process in case the ANGEL classifier failed to detect coding potential in the CDS region.
 
 If `--use_rev_strand` is used, then the same process is repeated on the reverse-complement of the sequence. 
 
-If `--output_rev_only_if_longer` is used, then the reverse strand ORF is output only if it is longer than the longest ORF from the forward strand.
+The `--output_mode` option is used to determine what to output when there are ORF predictions from both ANGEL and dumb and possibly the reverse strand (if `--use_rev_strand` is on).
+
+By default, the `--output_mode=best` will pick the longest ORF, whether that be from ANGEL or dumb, plus or reverse (if `--use_rev_strand` is on) strand.
+
+If `--output_mode=all`, then all predictions will be output as long as they are longer than the threshold length (for ANGEL, `min_angel_aa_length` and for dumb, `min_dumb_aa_length`).
+
 
 
 Example:
 
 ```
 angel_predict.py test.human_1000seqs.fa human.MCF7.random_500_for_training.pickle test.human \
-      --use_rev_strand --output_rev_only_if_longer --min_dumb_aa_length 100
+      --use_rev_strand --output_mode=best --min_angel_aa_length 100 --min_dumb_aa_length 100
 ```
 
 The output files are: ``<output_prefix>.ANGEL.cds``, ``<output_prefix>.ANGEL.pep``, and ``<output_prefix>.ANGEL.utr``.
@@ -225,6 +232,30 @@ Each output sequence ID has the format:
 Where ``tag`` is ``confident``, ``likely``, or ``suspicious`` for ANGEL predictions, and ``dumb`` for dumb ORF predictions.
 
 ``completeness`` is either ``complete``, ``5partial``, ``3partial``, or ``internal`` based on the presence or absence of start and stop codons.
+
+
+#### Using genomic to error correct first before ORF prediction
+
+If a high-quality genome is available and you want to additionally run ANGEL on a genomic version of the transcripts, you can use the `err_correct_w_genome.py` script from [cDNA_Cupcake](https://github.com/Magdoll/cDNA_Cupcake/). cDNA_Cupcake is a light-weight repository for simple manipulation scripts. See the [err_correct_w_genome tutorial](https://github.com/Magdoll/cDNA_Cupcake/wiki/Sequence-Manipulation-Wiki#errgenome) on how to obtain a genomic version first.
+
+Once you have the genome-corrected version, you can run ANGEL separately on it using either just `dumb_predict.py` (if you trust the genome bases and alignment exon boundaries to be precise) or `angel_predict.py` (to still allow for some errors).
+
+With two versions of ANGEL output (one from the PacBio version, one from the genomic version), you can use the script `angel_compare_files.py` to pick the longest ORF for each sequence from the two files.
+
+```
+angel_comapre_files.py <ANGEL_prefix1> <ANGEL_prefix2> <output_prefix>
+```
+
+Below is an example:
+
+```
+# run ANGEL on PacBio sequence, now obtain test1.cds, test1.utr, test1.pep
+# run ANGEL on genomic sequence, now obtain test2.cds, test2.utr, test2.pep
+
+angel_compare_files.py test1 test2 test3
+```
+
+The result will be output to: test3.cds, test3.pep, test3.utr, and test3.compare.txt
 
 
 ## LICENSE
