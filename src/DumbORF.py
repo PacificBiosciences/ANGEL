@@ -46,7 +46,20 @@ def predict_longest_ORFs(seq, min_aa_length):
                 # check the very last possible ORF
                 if i < len(starts) and (j == len(stops) or (j < len(stops) and starts[i] > stops[j])) and n - starts[i] + 1 >= min_aa_length:
                     result[frame].append(('dumb-3partial', starts[i]*3+frame, n*3+(frame if frame<=m else frame-3)))
-    return result
+
+    # now pick the frame with the longest ORF!
+    if all(len(v)==0 for v in result.itervalues()): # no ORF found
+        return None
+
+    best_frame, best_flag, best_s, best_e, best_len = None, None, None, None, 0
+    for _frame, v in result.iteritems():
+        for (flag, s, e) in v:
+            _len = e - s
+            if _len > best_len:
+                best_frame, best_flag, best_s, best_e, best_len = \
+                _frame, flag, s, e, _len
+
+    return {_frame: [(flag, s, e)]}
 
 def calculate_base_frequency(fasta_filename, output_filename, use_rev_strand=False):
     """
@@ -147,7 +160,7 @@ def transdecoder_main(fasta_filename, output_prefix='dumb_orf', min_aa_length=10
 
     print >> sys.stderr, "running CD-HIT to generate non-redundant set...."
     # step 2. use CD-hit to remove redundancy, then pick out top <use_top>
-    cmd = "cd-hit -T {cpus} -i {o}.cds -o {o}.nr90.cds -c 0.90 -n 5".format(o=output_prefix, cpus=cpus)
+    cmd = "cd-hit -T {cpus} -M 0 -i {o}.cds -o {o}.nr90.cds -c 0.90 -n 5".format(o=output_prefix, cpus=cpus)
     subprocess.check_call(cmd, shell=True)
 
     lengths = [(len(r.seq), r) for r in SeqIO.parse(open(output_prefix+'.nr90.cds'), 'fasta')]
@@ -194,7 +207,7 @@ def select_for_training(input_prefix, output_prefix, use_top=500, choose_random=
     random --- if True, choose randomly instead of the longest top ones
     """
     print >> sys.stderr, "running CD-HIT to generate non-redundant set...."
-    cmd = "cd-hit -T {cpus} -i {o}.cds -o {o}.nr90.cds -c 0.90 -n 5".format(o=input_prefix, cpus=cpus)
+    cmd = "cd-hit -T {cpus} -M 0 -i {o}.cds -o {o}.nr90.cds -c 0.90 -n 5".format(o=input_prefix, cpus=cpus)
     subprocess.check_call(cmd, shell=True)
 
     lengths = [(len(r.seq), r.id) for r in SeqIO.parse(open(input_prefix+'.nr90.cds'), 'fasta')]

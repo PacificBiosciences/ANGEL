@@ -4,15 +4,15 @@ from distutils.extension import Extension
 
 ext_modules = [Extension("Angel.c_ORFscores", ["src/c_ORFscores.cpp"], language="c++")]
 
-setup(
+setup(  
         name = 'Angel',
-        version = '1.0', 
+        version = '2.0',
         author = 'Elizabeth Tseng',
         author_email = 'etseng@pacificbiosciences.com',
         license = 'LICENSE.txt',
         ext_modules = ext_modules,
-        scripts = ['dumb_predict.py', 'angel_train.py', 'angel_predict.py', 'angel_make_training_set.py'],
-        package_dir = {'Angel': 'src'}, 
+        scripts = ['dumb_predict.py', 'angel_train.py', 'angel_predict.py', 'angel_make_training_set.py', 'angel_compare_files.py'],
+        package_dir = {'Angel': 'src'},
         packages = ['Angel'],
         zip_safe = False,
         install_requires = [

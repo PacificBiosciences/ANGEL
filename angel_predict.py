@@ -10,14 +10,14 @@ if __name__ == "__main__":
     parser.add_argument("fasta_filename", help="Fasta filename to train on")
     parser.add_argument("classifier_pickle", help="Trained classifier pickle name")
     parser.add_argument("output_prefix", help="Output prefix")
-    parser.add_argument("--min_angel_aa_length", default=50, type=int, help="Minimum ORF length predicted from ANGEL (default: 50aa)")
-    parser.add_argument("--min_dumb_aa_length", default=100, type=int, help="Minimum ORF length predicted from dumbORF (default: 100aa)")
+    parser.add_argument("--min_angel_aa_length", default=50, type=int, help="Minimum ORF length predicted from ANGEL (default: 50 aa)")
+    parser.add_argument("--min_dumb_aa_length", default=100, type=int, help="Minimum ORF length predicted from dumbORF (default: 100 aa)")
     parser.add_argument("--use_rev_strand", default=False, action="store_true", help="Predict on reverse strand as well (default: off)")
-    parser.add_argument("--output_rev_only_if_longer", default=False, action="store_true", help="Output rev strand prediction only if longer than all predictions on forward strand (default: off), has no effect unless --use_rev_strand also used")
+    parser.add_argument("--output_mode", default="best", choices=["best", "all"], help="Output mode (default: best)")
     parser.add_argument("--cpus", default=8, type=int, help="Number of CPUs (default: 8)")
 
     args = parser.parse_args()
 
-    distribute_ANGEL_predict(args.fasta_filename, args.output_prefix, args.classifier_pickle, args.cpus, args.min_angel_aa_length, args.min_dumb_aa_length, args.use_rev_strand, args.output_rev_only_if_longer)
+    distribute_ANGEL_predict(args.fasta_filename, args.output_prefix, args.classifier_pickle, args.cpus, args.min_angel_aa_length, args.min_dumb_aa_length, args.use_rev_strand, args.output_mode)
 
 

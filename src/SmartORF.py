@@ -124,63 +124,76 @@ def ANGEL_training(cds_filename, utr_filename, output_pickle, num_workers=3):
     return data, target, bdt
 
 
-def ANGEL_predict_worker(input_fasta, output_prefix, bdt, o_all, min_ANGEL_aa_length=50, min_dumb_aa_length=100, use_rev_strand=False, output_rev_only_if_longer=False, starting_index=1):
+def ANGEL_predict_worker(input_fasta, output_prefix, bdt, o_all, min_ANGEL_aa_length=50, min_dumb_aa_length=100, use_rev_strand=False, output_mode='best', starting_index=1):
+    """
+    Output Mode is either "best" or "all"
+
+    If "all" and + strand only: ANGEL+, dumb+  (both subject to its length threshold)
+    If "all" and - strand also: ANGEL+, dumb+, ANGEL-, dumb-
+
+    If "best" and + strand only: argmax_(ANGEL+, dumb+)
+    If "best" and - strand also: argmax_(ANGEL+, dumb+, ANGEL-, dumb-)
+
+    For dumb, pick only the longest ORF ouf of the 3 possible frames for that strand.
+    For ANGEL, if there are multiple ORFs (suspicious), the longest one is chosen as the "length" to beat dumb,
+              and if ANGEL is chosen as output, all ORFs are output.
+    """
+
     for rec in SeqIO.parse(open(input_fasta), 'fasta'):
         ORFs = []
         seq_len = len(rec.seq)
-        n, m = len(rec.seq)/3, len(rec.seq)%3
+        n, m = seq_len/3, seq_len%3
         print >> sys.stderr, "predicting for", rec.id
-        # (1a) predict on + strand
+        # (1a) predict on + strand for ANGEL
         result = defaultdict(lambda: []) # frame --> list of (type, start, end)
-        max_angle_predicted_orf_len = min_dumb_aa_length
         flag, name, good = ORFscores.predict_ORF(rec, bdt, o_all, min_aa_len=min_ANGEL_aa_length)
         #print >> sys.stderr, flag, name, good
         for _frame, _stop, _start in good:
             s = _start * 3 + _frame if _start is not None else _frame
             e = _stop * 3 + _frame + 3 if _stop is not None else n*3 + (_frame if m >= _frame else 0)
             result[_frame].append((flag, s, e))
-            max_angle_predicted_orf_len = max(max_angle_predicted_orf_len, (e - s)/3 + 1)
-        ORFs.append((rec, result, '+'))
-        # (1b) run dumb ORFs, if better than longest of ANGEL's output it as well
-        dumb = DumbORF.predict_longest_ORFs(rec.seq.tostring().upper(), max_angle_predicted_orf_len)
+        if len(result) > 0:
+            ORFs.append((rec, result, '+'))
 
-        if sum(len(v) for v in dumb.itervalues()) > 0:
+
+        # (1b) run dumb ORFs which returns the frame with longest ORF as a dict frame -> (flag,s,e) or None
+        dumb = DumbORF.predict_longest_ORFs(rec.seq.tostring().upper(), min_dumb_aa_length)
+        if dumb is not None:
             ORFs.append((rec, dumb, '+'))
-            for v in dumb.itervalues():
-                if len(v) > 0:
-                    for _flag, _s, _e in v:
-                        max_angle_predicted_orf_len = max(max_angle_predicted_orf_len, (_e - _s)/3 + 1)
 
         # (2a) see if need to predict on - strand
         #      if need to, create a rec2 that has the rev complement
         if use_rev_strand:
-            #print "output_rev_only_if_longer:", output_rev_only_if_longer
-            if output_rev_only_if_longer: # min aa length must be longer than the forward strand longest prediction
-                min_dumb_aa_length_for_rev = max_angle_predicted_orf_len
-                min_ANGEL_aa_length_for_rev = max(max_angle_predicted_orf_len, min_ANGEL_aa_length)
-            else:
-                min_dumb_aa_length_for_rev = min_dumb_aa_length
-                min_ANGEL_aa_length_for_rev = min_ANGEL_aa_length
-                #print min_dumb_aa_length, min_ANGEL_aa_length
             rec2 = SeqRecord(rec.seq.reverse_complement(), id=rec.id, description=rec.description)
             result = defaultdict(lambda: []) # frame --> list of (type, start, end)
-            max_angle_predicted_orf_len = min_dumb_aa_length_for_rev
-            #print "calling rev with min_aa_len", min_ANGEL_aa_length
-            flag, name, good = ORFscores.predict_ORF(rec2, bdt, o_all, min_aa_len=min_ANGEL_aa_length_for_rev)
+            flag, name, good = ORFscores.predict_ORF(rec2, bdt, o_all, min_aa_len=min_ANGEL_aa_length)
             for _frame, _stop, _start in good:
                 s = _start * 3 + _frame if _start is not None else _frame
                 e = _stop * 3 + _frame + 3 if _stop is not None else n*3 + (_frame if m >= _frame else 0)
                 result[_frame].append((flag, s, e))
-                max_angle_predicted_orf_len = max(max_angle_predicted_orf_len, (e-s)/3+1)
-            ORFs.append((rec, result, '-')) # NOTE: sending rec instead of rec2 here is CORRECT
-            dumb = DumbORF.predict_longest_ORFs(rec2.seq.tostring().upper(), max_angle_predicted_orf_len)
-            if sum(len(v) for v in dumb.itervalues()) > 0:
-                ORFs.append((rec, dumb, '-')) # NOTE: sending rec instead of rec2 here is CORRECT
+            if len(result) > 0:
+                ORFs.append((rec, result, '-')) # NOTE: sending rec instead of rec2 here is CORRECT
+            dumb = DumbORF.predict_longest_ORFs(rec2.seq.tostring().upper(), min_dumb_aa_length)
+            if dumb is not None:
+                ORFs.append((rec, dumb, '-'))
 
+        # now decide what to output from ORFs
+        # if output_mode:all, just output everything
+        # if output_mode:best, pick the longest one
+
+        if output_mode == 'best' and len(ORFs)>0:
+            best_rec, best_result, best_strand = ORFs[0]
+            best_len = max(max(e-s for (flag,s,e) in v) for v in best_result.itervalues())
+            for _rec, _result, _strand in ORFs[1:]:
+                _len = max(max(e-s for (flag,s,e) in v) for v in _result.itervalues())
+                if _len > best_len:
+                    best_rec, best_result, best_strand, best_len = \
+                    _rec, _result, _strand, _len
+            ORFs = [(best_rec, best_result, best_strand)]
         starting_index = write_CDS_n_PEP(ORFs, output_prefix, min_utr_length=50, append_file=True, starting_index=starting_index)
 
 
-def distribute_ANGEL_predict(fasta_filename, output_prefix, bdt_pickle_filename, num_workers=5, min_ANGEL_aa_length=50, min_dumb_aa_length=100, use_rev_strand=False, output_rev_only_if_longer=False):
+def distribute_ANGEL_predict(fasta_filename, output_prefix, bdt_pickle_filename, num_workers=5, min_ANGEL_aa_length=50, min_dumb_aa_length=100, use_rev_strand=False, output_mode='best'):
     tmpdir = "ANGEL.tmp." + str(int(time.time()))
     os.makedirs(tmpdir)
 
@@ -211,7 +224,7 @@ def distribute_ANGEL_predict(fasta_filename, output_prefix, bdt_pickle_filename,
     for i, input_fasta in enumerate(list_of_fasta):
         print >> sys.stderr, "Pool worker for", input_fasta
         starting_index = i * n + 1
-        p = Process(target=ANGEL_predict_worker, args=(input_fasta, input_fasta+'.ANGEL', bdt, o_all, min_ANGEL_aa_length, min_dumb_aa_length, use_rev_strand, output_rev_only_if_longer, starting_index))
+        p = Process(target=ANGEL_predict_worker, args=(input_fasta, input_fasta+'.ANGEL', bdt, o_all, min_ANGEL_aa_length, min_dumb_aa_length, use_rev_strand, output_mode, starting_index))
         p.start()
         workers.append(p)
 
