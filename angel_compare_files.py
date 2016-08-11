@@ -27,17 +27,27 @@ def compare_files(input_prefix1, input_prefix2, output_prefix):
         _id = r.id.split('|')[0] # ex: PB.3.1
         d2[_id] = max(len(r.seq), d2[_id])
 
+    f_out = open(output_prefix+'.compare.txt', 'w')
+    f_out.write("#file1:{0}\n".format(input_prefix1))
+    f_out.write("#file2:{}\n".format(input_prefix2))
+    f_out.write("id\tlen1\tlen2\tpick\n")
+
     to_use = {} # seq id --> 1 if to use file1, 2 otherwise
-    keys = set(d1.keys()).union(d2.keys())
+    keys = list(set(d1.keys()).union(d2.keys()))
+    keys.sort()
     for k in keys:
-        if d1[k] > d2[k]:
+        if d1[k] >= d2[k]:
             to_use[k] = 1
         else:
             to_use[k] = 2
+        f_out.write("{0}\t{1}\t{2}\t{3}\n".format(k, d1[k], d2[k], to_use[k]))
+    f_out.close()
+
 
     f_cds = open(output_prefix+'.cds', 'w')
     f_pep = open(output_prefix+'.pep', 'w')
     f_utr = open(output_prefix+'.utr', 'w')
+
 
     for r in SeqIO.parse(open(cds1), 'fasta'):
         _id = r.id.split('|')[0]

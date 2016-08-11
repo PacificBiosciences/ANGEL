@@ -36,13 +36,20 @@ def predict_longest_ORFs(seq, min_aa_length):
                     result[frame].append(('dumb-5partial', frame, stops[0]*3+3+frame))
             else: # has at least one start and one stop
                 i, j = 0, 0
+                # if the first stop is smaller than i, find the first j s.t. stops[j-1] < start[0] < stops[j]
+                if stops[0] < starts[0]:
+                    while j < len(stops) and starts[0] < stops[j-1]:
+                        j += 1
+                # now: stops[j-1] < starts[0] < stops[j]
                 while j < len(stops):
                     if i == len(starts): break
                     if stops[j] - starts[i] + 1 >= min_aa_length:
+                        #rint frame, starts[i], stops[j]
                         result[frame].append(('dumb-complete', starts[i]*3+frame, stops[j]*3+3+frame))
                     j += 1 # move stop one step down
                     while i < len(starts) and starts[i] < stops[j-1]:
                         i += 1
+                    # now starts[i] is between the last stop and this one
                 # check the very last possible ORF
                 if i < len(starts) and (j == len(stops) or (j < len(stops) and starts[i] > stops[j])) and n - starts[i] + 1 >= min_aa_length:
                     result[frame].append(('dumb-3partial', starts[i]*3+frame, n*3+(frame if frame<=m else frame-3)))
@@ -59,7 +66,7 @@ def predict_longest_ORFs(seq, min_aa_length):
                 best_frame, best_flag, best_s, best_e, best_len = \
                 _frame, flag, s, e, _len
 
-    return {_frame: [(flag, s, e)]}
+    return {best_frame: [(best_flag, best_s, best_e)]}
 
 def calculate_base_frequency(fasta_filename, output_filename, use_rev_strand=False):
     """
