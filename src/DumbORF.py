@@ -158,11 +158,13 @@ def transdecoder_main(fasta_filename, output_prefix='dumb_orf', min_aa_length=10
     for r in SeqIO.parse(open(fasta_filename), 'fasta'):
         seq = r.seq.tostring().upper()
         result = predict_longest_ORFs(seq, min_aa_length)
-        ORFs.append((r, result, '+'))
+        if result is not None:
+            ORFs.append((r, result, '+'))
         if use_rev_strand: # predict on - strand as well
             seq = r.seq.reverse_complement().tostring().upper()
             result = predict_longest_ORFs(seq, min_aa_length)
-            ORFs.append((r, result, '-'))
+            if result is not None:
+                ORFs.append((r, result, '-'))
     write_CDS_n_PEP(ORFs, output_prefix)
 
     print >> sys.stderr, "running CD-HIT to generate non-redundant set...."
