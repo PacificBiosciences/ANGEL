@@ -1,3 +1,2 @@
-dumb_predict.py test.human_1000seqs.fa test.human --use_top 50 --min_aa_length 300
-
+angel_predict.py test.fa MCF7_2015.dumb.final.training.pickle test_angel
 
