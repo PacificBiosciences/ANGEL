@@ -15,7 +15,7 @@ Current version: 2.1
 
 09.28.2016 New in version 2.1
 * added `--use_firstORF` option in `dumb_predict.py` that outputs first ORF instead of longest ORF
-* added `max_angel_secondORF_distance` option in `angel_predict.py` that only outputs later ORFs if they are close enough to the previous ORFs
+* added `--max_angel_secondORF_distance` option in `angel_predict.py` that only outputs later ORFs if they are close enough to the previous ORFs
 
 ===
 
@@ -31,7 +31,7 @@ Current version: 2.1
 
 The program is divided into three parts :
 
-* **Dumb ORF prediction**: ORF prediction that outputs all longest ORFs in all frames. Can be used to create a top training dataset.
+* **Dumb ORF prediction**: ORF prediction that outputs the longest ORF (or first ORF) in all frames. Can be used to create a top training dataset.
 
 * **ANGEL classifier training**: Train a coding potential classifier based on given training data. Must provide both CDS and UTR for positive and negative training set. 
 
@@ -138,7 +138,7 @@ python setup.py install
 <a href="dumb"/>
 #### Dumb ORF prediction
 
-`dumb_predict.py` takes as input a FASTA file. It outputs all longest ORFs (which could be overlapping) that exceed the user-defined minimum length and have a positive log-odds scores based on hexamer frequencies. 
+`dumb_predict.py` takes as input a FASTA file. It outputs the longest ORF (or first ORF) that exceed the user-defined minimum length and have a positive log-odds scores based on hexamer frequencies.
 
 
 Usage:
@@ -146,6 +146,7 @@ Usage:
 ```
 dumb_predict.py <fasta_filename> <output_prefix> 
        [--min_aa_length MIN_AA_LENGTH]
+       [--use_firstORF]
        [--use_rev_strand] [--cpus CPUS]
 ```
 
@@ -157,6 +158,9 @@ dumb_predict.py test.human_1000seqs.fa test.human.dumb --min_aa_length 300 --cpu
 ```
 
 The output consists of ``test.human.dumb.final.pep``, ``test.human.dumb.final.cds`` and ``test.human.dumb.final.utr``, which are the results of longest ORF prediction.
+
+By default, the longest ORF (regardless of frame) is chosen as output. This longest ORF must exceed the minimum length (`--min_aa_length`) and also have a positive log-odds score. If the `--use_firstORF` option is turned on, however, then no log-odds score is computed; instead, the first ORF (regardless of frame) that exceeds the minimum length is output. The `--use_firstORF` option is useful in cases where users believe the first ORF, and not the longest ORF, is the more correct prediction.
+
 
 <a name="trainset"/>
 #### Creating a non-redundant training dataset
@@ -215,6 +219,7 @@ Usage:
 ```
 angel_predict.py <input_fasta> <classifier_pickle> <output_prefix>
        [--min_angel_aa_length] [--min_dumb_aa_length] 
+       [--max_angel_secondORF_distance]
        [--use_rev_strand] [--output_mode [best,all]]
        [--cpus]
 ```
@@ -223,7 +228,7 @@ For each sequence, ANGEL uses the classifier to predict the coding potential of 
 
 * If there is only one predicted ORF, tag it as ``confident``. In this case, it is unlikely there are sequencing errors.
 * If there are multiple ORFs but only one exceeds `min_angel_aa_length` threshold, output that one ORF and tag it as ``likely``. In this case, the program is semi-positive that there are no sequencing errors or that the error occurs at the ends of the CDS, allowing successful prediction of a relatively long continuous ORF.
-* If there are multiple ORFs (which could be in multiple frames) exceeding the length threshold, output all of them and tag them as ``suspicious``. In this case, the ORFs could be genuine complete ORFs (indicating a polycistronic transcript or alternative ORFs) or fragments of the same ORF that has frame shift due to uncorrected sequencing errors.
+* If there are multiple ORFs (which could be in multiple frames) exceeding the length threshold, output all of them (provided the later ORFs are close enough to the upstream ORFs by the threshold determined by `max_angel_secondORF_distance`) and tag them as ``suspicious``. In this case, the ORFs could be genuine complete ORFs (indicating a polycistronic transcript or alternative ORFs) or fragments of the same ORF that has frame shift due to uncorrected sequencing errors.
 
 The longest ORF length from the ANGEL process is recorded as ``T``. Then, the same dumb ORF prediction (which simply looks for the longest stretch of ORF without stop codon interruption) is done on the forward three frames. The longest predicted dumb ORF is also outputted if, and only if, its length is greater than both ``T`` and `min_dumb_aa_length`. This is a fallback process in case the ANGEL classifier failed to detect coding potential in the CDS region.
 
@@ -235,7 +240,7 @@ By default, the `--output_mode=best` will pick the longest ORF, whether that be 
 
 If `--output_mode=all`, then all predictions will be output as long as they are longer than the threshold length (for ANGEL, `min_angel_aa_length` and for dumb, `min_dumb_aa_length`).
 
-
+The `--max_angel_secondORF_distance` parameter is used only in the ``suspicious`` case (cases where there is more than one ORF predicted) to determine whether or not to output the downstream ORFs based on how close they are to the upstream ORFs. The reasoning is, if the ORF prediction is broken up because of sequencing errors or remaining base errors, then the two ORFs should be very close to each other (because ANGEL expects there to be only a handful of base errors, not long stretches of errors). If the second ORF is very far from the first ORF (say more than 20 bp downstream), then it is not likely to be from sequencing errors. Rather the first ORF (with its stop codon) is the correct prediction. By default `max_angel_secondORF_distance` is set to 10 bp. So any downstream ORF that is further than 10 bp away from the upstream ORF will be discarded.
 
 Example:
 
