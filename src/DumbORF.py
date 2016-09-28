@@ -9,10 +9,10 @@ import Angel.ORFscores as ORFscores
 from Bio import SeqIO
 
 @sanity_check_ATCG
-def predict_longest_ORFs(seq, min_aa_length):
+def predict_longest_ORFs(seq, min_aa_length, use_firstORF=False):
     """
     seq --- should be plain string in all upper case, A/T/C/G
-    Return all longest ORFs that exceed <min_length>
+    Return the longest ORFs that exceed <min_length> (unless use_firstORF is True)
 
     Returns: dict of <frame> --> list of (flag, <0-based start>, <1-based end>)
     NOTE that is the seq is reverse complemented, the handler function needs to rev the coords on its own
@@ -58,13 +58,22 @@ def predict_longest_ORFs(seq, min_aa_length):
     if all(len(v)==0 for v in result.itervalues()): # no ORF found
         return None
 
+
     best_frame, best_flag, best_s, best_e, best_len = None, None, None, None, 0
-    for _frame, v in result.iteritems():
-        for (flag, s, e) in v:
-            _len = e - s
-            if _len > best_len:
-                best_frame, best_flag, best_s, best_e, best_len = \
-                _frame, flag, s, e, _len
+    if not use_firstORF: # find the longest ORF among all frames
+        for _frame, v in result.iteritems():
+            for (flag, s, e) in v:
+                _len = e - s
+                if _len > best_len:
+                    best_frame, best_flag, best_s, best_e, best_len = \
+                    _frame, flag, s, e, _len
+    else: # use the first ORF among all frames
+        for _frame, v in result.iteritems():
+            for (flag, s, e) in v:
+                _len = e - s
+                if best_s is None or s < best_s or (s==best_s and _len>best_len):
+                    best_frame, best_flag, best_s, best_e, best_len = \
+                    _frame, flag, s, e, _len
 
     return {best_frame: [(best_flag, best_s, best_e)]}
 
@@ -142,7 +151,7 @@ def score_cds_by_likelihood(cds_filename, log_scores):
     return result
 
 
-def transdecoder_main(fasta_filename, output_prefix='dumb_orf', min_aa_length=100, use_rev_strand=False, cpus=8):
+def transdecoder_main(fasta_filename, output_prefix='dumb_orf', min_aa_length=100, use_rev_strand=False, use_firstORF=False, cpus=8):
     """
     1. Predict longest ORFs, write to <output_prefix>.cds|.utr|.pep
     2. Run CD-hit to get non-redundant set, then pick the top 500 for getting hexamer information, <output_prefix>.nr90.longest_500.cds
@@ -157,15 +166,24 @@ def transdecoder_main(fasta_filename, output_prefix='dumb_orf', min_aa_length=10
     ORFs = [] # list of (sequence, result, strand)
     for r in SeqIO.parse(open(fasta_filename), 'fasta'):
         seq = r.seq.tostring().upper()
-        result = predict_longest_ORFs(seq, min_aa_length)
+        result = predict_longest_ORFs(seq, min_aa_length, use_firstORF) # result is {best_frame: [(best_flag, best_s, best_e)]}
         if result is not None:
             ORFs.append((r, result, '+'))
         if use_rev_strand: # predict on - strand as well
             seq = r.seq.reverse_complement().tostring().upper()
-            result = predict_longest_ORFs(seq, min_aa_length)
+            result = predict_longest_ORFs(seq, min_aa_length, use_firstORF)
             if result is not None:
                 ORFs.append((r, result, '-'))
-    write_CDS_n_PEP(ORFs, output_prefix)
+
+
+    if use_firstORF: # no need to do scoring, just use firstORF
+        # simply find the first ORF in ORFs
+        write_CDS_n_PEP(ORFs, output_prefix + '.final')
+        print >> sys.stderr, "Dumb ORF prediction done. Final output written to:", output_prefix + '.final.cds', \
+            output_prefix + '.final.utr', output_prefix + '.final.pep'
+        return # all done!
+    else: # need to score, write this current one down first
+        write_CDS_n_PEP(ORFs, output_prefix)
 
     print >> sys.stderr, "running CD-HIT to generate non-redundant set...."
     # step 2. use CD-hit to remove redundancy, then pick out top <use_top>

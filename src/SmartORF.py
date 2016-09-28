@@ -124,7 +124,7 @@ def ANGEL_training(cds_filename, utr_filename, output_pickle, num_workers=3):
     return data, target, bdt
 
 
-def ANGEL_predict_worker(input_fasta, output_prefix, bdt, o_all, min_ANGEL_aa_length=50, min_dumb_aa_length=100, use_rev_strand=False, output_mode='best', starting_index=1):
+def ANGEL_predict_worker(input_fasta, output_prefix, bdt, o_all, min_ANGEL_aa_length=50, min_dumb_aa_length=100, use_rev_strand=False, output_mode='best', max_angel_secondORF_distance=10, starting_index=1):
     """
     Output Mode is either "best" or "all"
 
@@ -152,6 +152,18 @@ def ANGEL_predict_worker(input_fasta, output_prefix, bdt, o_all, min_ANGEL_aa_le
             s = _start * 3 + _frame if _start is not None else _frame
             e = _stop * 3 + _frame + 3 if _stop is not None else n*3 + (_frame if m >= _frame else 0)
             result[_frame].append((flag, s, e))
+        # for each frame, only keep the first ORF unless the later ones overlap or is sufficiently close
+        for _frame in result:
+            stuff = result[_frame]
+            stuff.sort(key=lambda (a,b,c): (b,c-b)) # sort by start, then length
+            i = 1
+            while i < len(stuff):
+                if stuff[i-1][2]-max_angel_secondORF_distance <= stuff[i][1] <= stuff[i-1][2]+max_angel_secondORF_distance:
+                    pass
+                else: # is too far, kick it!
+                    stuff.pop(i)
+            result[_frame] = stuff
+
         if len(result) > 0:
             ORFs.append((rec, result, '+'))
 
@@ -171,6 +183,18 @@ def ANGEL_predict_worker(input_fasta, output_prefix, bdt, o_all, min_ANGEL_aa_le
                 s = _start * 3 + _frame if _start is not None else _frame
                 e = _stop * 3 + _frame + 3 if _stop is not None else n*3 + (_frame if m >= _frame else 0)
                 result[_frame].append((flag, s, e))
+            # for each frame, only keep the first ORF unless the later ones overlap or is sufficiently close
+            for _frame in result:
+                stuff = result[_frame]
+                stuff.sort(key=lambda (a,b,c): (b,c-b)) # sort by start, then length
+                i = 1
+                while i < len(stuff):
+                    if stuff[i-1][2]-max_angel_secondORF_distance <= stuff[i][1] <= stuff[i-1][2]+max_angel_secondORF_distance:
+                        pass
+                    else: # is too far, kick it!
+                        stuff.pop(i)
+                result[_frame] = stuff
+
             if len(result) > 0:
                 ORFs.append((rec, result, '-')) # NOTE: sending rec instead of rec2 here is CORRECT
             dumb = DumbORF.predict_longest_ORFs(rec2.seq.tostring().upper(), min_dumb_aa_length)
@@ -193,7 +217,7 @@ def ANGEL_predict_worker(input_fasta, output_prefix, bdt, o_all, min_ANGEL_aa_le
         starting_index = write_CDS_n_PEP(ORFs, output_prefix, min_utr_length=50, append_file=True, starting_index=starting_index)
 
 
-def distribute_ANGEL_predict(fasta_filename, output_prefix, bdt_pickle_filename, num_workers=5, min_ANGEL_aa_length=50, min_dumb_aa_length=100, use_rev_strand=False, output_mode='best'):
+def distribute_ANGEL_predict(fasta_filename, output_prefix, bdt_pickle_filename, num_workers=5, min_ANGEL_aa_length=50, min_dumb_aa_length=100, use_rev_strand=False, output_mode='best', max_angel_secondORF_distance=10):
     tmpdir = "ANGEL.tmp." + str(int(time.time()))
     os.makedirs(tmpdir)
 
@@ -224,7 +248,7 @@ def distribute_ANGEL_predict(fasta_filename, output_prefix, bdt_pickle_filename,
     for i, input_fasta in enumerate(list_of_fasta):
         print >> sys.stderr, "Pool worker for", input_fasta
         starting_index = i * n + 1
-        p = Process(target=ANGEL_predict_worker, args=(input_fasta, input_fasta+'.ANGEL', bdt, o_all, min_ANGEL_aa_length, min_dumb_aa_length, use_rev_strand, output_mode, starting_index))
+        p = Process(target=ANGEL_predict_worker, args=(input_fasta, input_fasta+'.ANGEL', bdt, o_all, min_ANGEL_aa_length, min_dumb_aa_length, use_rev_strand, output_mode, max_angel_secondORF_distance, starting_index))
         p.start()
         workers.append(p)
 
