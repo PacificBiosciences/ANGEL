@@ -3,7 +3,7 @@ __author__ = 'lachesis'
 import os, sys, subprocess, time
 from cPickle import load, dump
 from collections import defaultdict
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, Pool
 import numpy as np
 from sklearn.ensemble import AdaBoostClassifier
 from Bio import SeqIO
@@ -159,9 +159,10 @@ def ANGEL_predict_worker(input_fasta, output_prefix, bdt, o_all, min_ANGEL_aa_le
             i = 1
             while i < len(stuff):
                 if stuff[i-1][2]-max_angel_secondORF_distance <= stuff[i][1] <= stuff[i-1][2]+max_angel_secondORF_distance:
-                    pass
+                    i += 1
                 else: # is too far, kick it!
                     stuff.pop(i)
+
             result[_frame] = stuff
 
         if len(result) > 0:
@@ -214,8 +215,13 @@ def ANGEL_predict_worker(input_fasta, output_prefix, bdt, o_all, min_ANGEL_aa_le
                     best_rec, best_result, best_strand, best_len = \
                     _rec, _result, _strand, _len
             ORFs = [(best_rec, best_result, best_strand)]
+        print >> sys.stderr, "writing result for", rec.id, "to", output_prefix
         starting_index = write_CDS_n_PEP(ORFs, output_prefix, min_utr_length=50, append_file=True, starting_index=starting_index)
+    print >> sys.stderr, "ALL DONE for", output_prefix
+    os.system("touch {0}.DONE".format(output_prefix))
 
+def ANGEL_predict_worker_helper(args):
+    return ANGEL_predict_worker(*args)
 
 def distribute_ANGEL_predict(fasta_filename, output_prefix, bdt_pickle_filename, num_workers=5, min_ANGEL_aa_length=50, min_dumb_aa_length=100, use_rev_strand=False, output_mode='best', max_angel_secondORF_distance=10):
     tmpdir = "ANGEL.tmp." + str(int(time.time()))
@@ -228,11 +234,22 @@ def distribute_ANGEL_predict(fasta_filename, output_prefix, bdt_pickle_filename,
         o_all = a['o_all']
 
     print >> sys.stderr, "Splitting input into chunks for parallelization...."
+
+    ###
+    # split the input into chunks of 1000 (fixed) sequences
+    # use a Pool to continously work on each of the input
+    ###
+
     total_seqs = 0
     for r in SeqIO.parse(open(fasta_filename), 'fasta'): total_seqs += 1
-    num_workers = min(num_workers, total_seqs)
-    num_seqs_per_worker = total_seqs / num_workers + 1
-    handles = [open(os.path.join(tmpdir, output_prefix+'.split_'+str(i)+'.fa'), 'w') for i in xrange(num_workers)]
+    num_workers = min(num_workers, total_seqs)  # just in case there are fewer sequences than workers
+
+    if total_seqs < num_workers * 1000:
+        num_seqs_per_worker = total_seqs / num_workers
+    else:
+        num_seqs_per_worker = min(1000, total_seqs) # used to be: total_seqs / num_workers + 1
+    num_splits = total_seqs / num_seqs_per_worker + 1
+    handles = [open(os.path.join(tmpdir, output_prefix+'.split_'+str(i)+'.fa'), 'w') for i in xrange(num_splits)]
     i = 0
     for r in SeqIO.parse(open(fasta_filename), 'fasta'):
         f = handles[i/num_seqs_per_worker]
@@ -243,18 +260,32 @@ def distribute_ANGEL_predict(fasta_filename, output_prefix, bdt_pickle_filename,
 
     list_of_fasta = [ f.name for f in handles ]
 
-    n = ((i / num_workers + 1) / 10) * 10
-    workers = []
+    n = num_seqs_per_worker
+    #workers = []
+    data = []
     for i, input_fasta in enumerate(list_of_fasta):
         print >> sys.stderr, "Pool worker for", input_fasta
         starting_index = i * n + 1
-        p = Process(target=ANGEL_predict_worker, args=(input_fasta, input_fasta+'.ANGEL', bdt, o_all, min_ANGEL_aa_length, min_dumb_aa_length, use_rev_strand, output_mode, max_angel_secondORF_distance, starting_index))
-        p.start()
-        workers.append(p)
 
-    for p in workers:
-        print >> sys.stderr, "waiting for worker", p.name
-        p.join()
+        data.append((input_fasta, input_fasta+'.ANGEL', bdt, o_all, \
+                     min_ANGEL_aa_length, min_dumb_aa_length, use_rev_strand,\
+                     output_mode, max_angel_secondORF_distance, starting_index))
+        #p = Process(target=ANGEL_predict_worker, args=(input_fasta, input_fasta+'.ANGEL', bdt, o_all, min_ANGEL_aa_length, min_dumb_aa_length, use_rev_strand, output_mode, max_angel_secondORF_distance, starting_index))
+        #p.start()
+        #workers.append(p)
+
+    #for p in workers:
+    #    print >> sys.stderr, "waiting for worker", p.name
+    #    p.join()
+
+    pool = Pool(num_workers)
+    pool.map(ANGEL_predict_worker_helper, data)
+
+    print >> sys.stderr, "Closing Pool...."
+    pool.close()
+    print >> sys.stderr, "Joining Pool...."
+    pool.join()
+    print >> sys.stderr, "All workers completed."
 
     cmd = "cat {0} > {1}.ANGEL.cds".format(" ".join(x+'.ANGEL.cds' for x in list_of_fasta), output_prefix)
     if subprocess.check_call(cmd, shell=True)!=0:
