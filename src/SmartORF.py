@@ -146,24 +146,27 @@ def ANGEL_predict_worker(input_fasta, output_prefix, bdt, o_all, min_ANGEL_aa_le
         print >> sys.stderr, "predicting for", rec.id
         # (1a) predict on + strand for ANGEL
         result = defaultdict(lambda: []) # frame --> list of (type, start, end)
+        stuff = [] # (frame, type, start, end)  # this should eventually replace result, keeping result for now.
         flag, name, good = ORFscores.predict_ORF(rec, bdt, o_all, min_aa_len=min_ANGEL_aa_length)
         #print >> sys.stderr, flag, name, good
         for _frame, _stop, _start in good:
             s = _start * 3 + _frame if _start is not None else _frame
             e = _stop * 3 + _frame + 3 if _stop is not None else n*3 + (_frame if m >= _frame else 0)
             result[_frame].append((flag, s, e))
-        # for each frame, only keep the first ORF unless the later ones overlap or is sufficiently close
-        for _frame in result:
-            stuff = result[_frame]
-            stuff.sort(key=lambda (a,b,c): (b,c-b)) # sort by start, then length
-            i = 1
-            while i < len(stuff):
-                if stuff[i-1][2]-max_angel_secondORF_distance <= stuff[i][1] <= stuff[i-1][2]+max_angel_secondORF_distance:
-                    i += 1
-                else: # is too far, kick it!
-                    stuff.pop(i)
+            stuff.append((_frame, flag, s, e))
 
-            result[_frame] = stuff
+        # REGARDLESS OF FRAME, only keep the first ORF unless the later ones overlap or is sufficiently close
+        stuff.sort(key=lambda (a,b,c,d): (c, d-c)) # sort by start, then length
+        i = 1
+        while i < len(stuff):
+            if stuff[i-1][3]-max_angel_secondORF_distance <= stuff[i][2] <= stuff[i-1][3]+max_angel_secondORF_distance:
+                i += 1
+            else: # is too far, kick it!
+                stuff.pop(i)
+        # put stuff back into result as a dict
+        result = defaultdict(lambda: []) # result is effectively overwritten, in the future I can just remove the result in the lines above
+        for _frame, _flag, _start, _end in stuff:
+            result[_frame].append((_flag, _start, _end))
 
         if len(result) > 0:
             ORFs.append((rec, result, '+'))
@@ -207,6 +210,8 @@ def ANGEL_predict_worker(input_fasta, output_prefix, bdt, o_all, min_ANGEL_aa_le
         # if output_mode:best, pick the longest one
 
         if output_mode == 'best' and len(ORFs)>0:
+            #print >> sys.stderr, "output mode: best"
+            #print >> sys.stderr, ORFs
             best_rec, best_result, best_strand = ORFs[0]
             best_len = max(max(e-s for (flag,s,e) in v) for v in best_result.itervalues())
             for _rec, _result, _strand in ORFs[1:]:
@@ -216,6 +221,7 @@ def ANGEL_predict_worker(input_fasta, output_prefix, bdt, o_all, min_ANGEL_aa_le
                     _rec, _result, _strand, _len
             ORFs = [(best_rec, best_result, best_strand)]
         print >> sys.stderr, "writing result for", rec.id, "to", output_prefix
+        #print >> sys.stderr, "current ORFs:", ORFs
         starting_index = write_CDS_n_PEP(ORFs, output_prefix, min_utr_length=50, append_file=True, starting_index=starting_index)
     print >> sys.stderr, "ALL DONE for", output_prefix
     os.system("touch {0}.DONE".format(output_prefix))
