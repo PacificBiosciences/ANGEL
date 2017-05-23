@@ -7,11 +7,14 @@ ANGEL: Robust Open Reading Frame prediction
 (06.27.2014)  See this talk on validating PacBio transcript-based ORF predictions with mass spec data! ANGEL was used for creating the set of ORF predictions from the MCF-7 dataset. [G. Sheynkman: Building a "perfect" proteomics database using PacBio MCF-7 transcriptome data](https://vimeo.com/99358676)
 
 
-Last Updated: 11/8/2016
+Last Updated: 05/23/2017
 
-Current version: 2.3
+Current version: 2.4
 
 ===
+05.23.2017 New in version 2.4
+An user pointed out a bug in SmartORF.py:169 that would cause an infinite loop if `--use_rev_strand` is called in angel_train.py. Fixed!
+
 
 11.08.2016 New in version 2.3
 
