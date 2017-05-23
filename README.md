@@ -12,8 +12,10 @@ Last Updated: 05/23/2017
 Current version: 2.4
 
 ===
+
 05.23.2017 New in version 2.4
-An user pointed out a bug in SmartORF.py:169 that would cause an infinite loop if `--use_rev_strand` is called in angel_train.py. Fixed!
+
+* An user pointed out a bug in SmartORF.py:169 that would cause an infinite loop if `--use_rev_strand` is called in angel_train.py. Fixed!
 
 
 11.08.2016 New in version 2.3
