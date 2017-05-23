@@ -194,7 +194,7 @@ def ANGEL_predict_worker(input_fasta, output_prefix, bdt, o_all, min_ANGEL_aa_le
                 i = 1
                 while i < len(stuff):
                     if stuff[i-1][2]-max_angel_secondORF_distance <= stuff[i][1] <= stuff[i-1][2]+max_angel_secondORF_distance:
-                        pass
+                        i += 1
                     else: # is too far, kick it!
                         stuff.pop(i)
                 result[_frame] = stuff
