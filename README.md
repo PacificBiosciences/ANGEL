@@ -57,8 +57,10 @@ The ANGEL classifier is based on the classifier described in Shimizu *et al.*, "
 **NOTE**: for both dumb and ANGEL ORF prediction, it is recommended that the input sequences have at least 99% accuracy. This means either short read assembled transcripts or for PacBio, the output from running the [Iso-Seq pipeline](https://github.com/PacificBiosciences/cDNA_primer/) which are Quiver-polished high-quality consensus sequences. ANGEL has not been tested on PacBio subread-level or ReadsOfInsert-level sequences.
 
 
-<a href="install"/>
+<a name="install"/>
+
 ## SOFTWARE REQUIREMENT
+
 You need to install [CD-HIT](http://www.bioinformatics.org/cd-hit/) and have it available in your ``$PATH`` variable to run dumb ORF prediction.
 
 ## PYTHON PREREQUISITE
@@ -149,7 +151,8 @@ python setup.py install
 
 ## USAGE
 
-<a href="dumb"/>
+<a name="dumb"/>
+
 #### Dumb ORF prediction
 
 `dumb_predict.py` takes as input a FASTA file. It outputs the longest ORF (or first ORF) that exceed the user-defined minimum length and have a positive log-odds scores based on hexamer frequencies.
@@ -177,6 +180,7 @@ By default, the longest ORF (regardless of frame) is chosen as output. This long
 
 
 <a name="trainset"/>
+
 #### Creating a non-redundant training dataset
 
 Redundancy in the training dataset, such as highly identical CDS sequences from alternative isoforms or homologous genes, can skew the classifier training. The script `angel_make_training_set.py` clusters an input set of CDS sequences into non-redundant clusters, and outputs a selective subset for training data.
@@ -202,6 +206,7 @@ The output files are: ``test.human.dumb.final.training.cds``, ``test.human.dumb.
 
 
 <a name="training"/>
+
 #### ANGEL classifier training
 
 
@@ -226,6 +231,7 @@ On a typical 500-sequence training dataset, the training may take several hours.
 
 
 <a name="angelpredict"/>
+
 #### ANGEL ORF prediction
 
 Usage:
@@ -276,6 +282,7 @@ Where ``tag`` is ``confident``, ``likely``, or ``suspicious`` for ANGEL predicti
 
 
 <a name="errgenome"/>
+
 #### Using genomic to error correct first before ORF prediction
 
 If a high-quality genome is available and you want to additionally run ANGEL on a genomic version of the transcripts, you can use the `err_correct_w_genome.py` script from [cDNA_Cupcake](https://github.com/Magdoll/cDNA_Cupcake/). cDNA_Cupcake is a light-weight repository for simple manipulation scripts. See the [err_correct_w_genome tutorial](https://github.com/Magdoll/cDNA_Cupcake/wiki/Sequence-Manipulation-Wiki#errgenome) on how to obtain a genomic version first.
