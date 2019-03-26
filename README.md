@@ -7,11 +7,16 @@ ANGEL: Robust Open Reading Frame prediction
 (06.27.2014)  See this talk on validating PacBio transcript-based ORF predictions with mass spec data! ANGEL was used for creating the set of ORF predictions from the MCF-7 dataset. [G. Sheynkman: Building a "perfect" proteomics database using PacBio MCF-7 transcriptome data](https://vimeo.com/99358676)
 
 
-Last Updated: 05/23/2017
+Last Updated: 03/26/2019
 
-Current version: 2.4
+Current version: 2.5
 
 ===
+
+03.29.2019 Fixed in version 2.5
+
+* `angel_predict` fails if input sequence has non A/T/C/G/. Now automatically replaces it with default 'A'.
+
 
 05.23.2017 New in version 2.4
 

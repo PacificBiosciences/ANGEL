@@ -7,14 +7,18 @@ from multiprocessing import Process, Queue, Pool
 import numpy as np
 from sklearn.ensemble import AdaBoostClassifier
 from Bio import SeqIO
+from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 import Angel
 from Angel import c_ORFscores, ORFscores, DumbORF
-from Angel.ORFutils import write_CDS_n_PEP
+from Angel.ORFutils import write_CDS_n_PEP, convert_non_ATCG
 
 sys.modules['c_ORFscores'] = Angel.c_ORFscores # need this for unpickling to work
 
 MAX_RECORD_CHUNK = 100
+
+
+
 
 def add_to_background(o_all, records):
     for r in records:
@@ -108,7 +112,14 @@ def ANGEL_training(cds_filename, utr_filename, output_pickle, num_workers=3):
 #        print >> sys.stderr, "running get_data_parallel for UTR, chunk", i
 #        data_neg += get_data_parallel(o_all, utr[i*MAX_RECORD_CHUNK:(i+1)*MAX_RECORD_CHUNK], [0, 1, 2], num_workers)
 
+    print >> sys.stderr, "size of neg training data: {0}, pos training data: {1}".format(\
+        len(data_neg), len(data_pos))
+
+    print >> sys.stderr, "using first 10,000 training pos/neg only"
+    data_neg = data_neg[:10000]
+    data_pos = data_pos[:10000]
     data = data_neg + data_pos
+
     target = [0]*len(data_neg) + [1]*len(data_pos)
     data = np.array(data)
 
@@ -141,6 +152,8 @@ def ANGEL_predict_worker(input_fasta, output_prefix, bdt, o_all, min_ANGEL_aa_le
 
     for rec in SeqIO.parse(open(input_fasta), 'fasta'):
         ORFs = []
+        # convert any non-ATCG to 'A'
+        rec.seq = Seq(convert_non_ATCG(str(rec.seq), replace_with='A'))
         seq_len = len(rec.seq)
         n, m = seq_len/3, seq_len%3
         print >> sys.stderr, "predicting for", rec.id
@@ -194,7 +207,7 @@ def ANGEL_predict_worker(input_fasta, output_prefix, bdt, o_all, min_ANGEL_aa_le
                 i = 1
                 while i < len(stuff):
                     if stuff[i-1][2]-max_angel_secondORF_distance <= stuff[i][1] <= stuff[i-1][2]+max_angel_secondORF_distance:
-                        i += 1
+                        pass
                     else: # is too far, kick it!
                         stuff.pop(i)
                 result[_frame] = stuff

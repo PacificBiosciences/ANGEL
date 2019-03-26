@@ -18,6 +18,17 @@ def sanity_check_ATCG(func):
         return func(input_string, *arg)
     return g
 
+def convert_non_ATCG(seq, replace_with='A'):
+    new_seq = ''
+    for x in seq.upper():
+        if x not in ('A','T','C','G'):
+            new_seq += replace_with
+        else:
+            new_seq += x
+
+    return new_seq
+
+
 @sanity_check_ATCG
 def test(seq):
     print "just a test. input is", seq
