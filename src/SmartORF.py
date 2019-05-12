@@ -22,8 +22,8 @@ MAX_RECORD_CHUNK = 100
 
 def add_to_background(o_all, records):
     for r in records:
-        o_all.calc_codon_count(r.seq.tostring().upper(), len(r.seq))
-        aa = r.seq.translate().tostring()
+        o_all.calc_codon_count(str(r.seq).upper(), len(r.seq))
+        aa = str(r.seq.translate())
         o_all.calc_amino_count(aa, len(aa))
         o_all.calc_diamino_count(aa, len(aa))
 
@@ -186,7 +186,7 @@ def ANGEL_predict_worker(input_fasta, output_prefix, bdt, o_all, min_ANGEL_aa_le
 
 
         # (1b) run dumb ORFs which returns the frame with longest ORF as a dict frame -> (flag,s,e) or None
-        dumb = DumbORF.predict_longest_ORFs(rec.seq.tostring().upper(), min_dumb_aa_length)
+        dumb = DumbORF.predict_longest_ORFs(str(rec.seq).upper(), min_dumb_aa_length)
         if dumb is not None:
             ORFs.append((rec, dumb, '+'))
 
@@ -214,7 +214,7 @@ def ANGEL_predict_worker(input_fasta, output_prefix, bdt, o_all, min_ANGEL_aa_le
 
             if len(result) > 0:
                 ORFs.append((rec, result, '-')) # NOTE: sending rec instead of rec2 here is CORRECT
-            dumb = DumbORF.predict_longest_ORFs(rec2.seq.tostring().upper(), min_dumb_aa_length)
+            dumb = DumbORF.predict_longest_ORFs(str(rec2.seq).upper(), min_dumb_aa_length)
             if dumb is not None:
                 ORFs.append((rec, dumb, '-'))
 

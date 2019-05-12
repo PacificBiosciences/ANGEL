@@ -91,10 +91,10 @@ def calculate_base_frequency(fasta_filename, output_filename, use_rev_strand=Fal
     counts = {'A':0, 'T':0, 'C':0, 'G':0}
     freq = {}
     for r in SeqIO.parse(open(fasta_filename), 'fasta'):
-        seq = r.seq.tostring().upper()
+        seq = str(r.seq).upper()
         for s in seq: counts[s] += 1
         if use_rev_strand:
-            seq = r.seq.reverse_complement().tostring().upper()
+            seq = str(r.seq.reverse_complement()).upper()
             for s in seq: counts[s] += 1
     _sum = sum(v for v in counts.itervalues())
     for k,v in counts.iteritems(): freq[k] = counts[k] * 1. / _sum
@@ -112,7 +112,7 @@ def calculate_hexa_penta_score(cds_filename, base_freq, output_filename):
     hexamer = {0: defaultdict(lambda: 1), 1:defaultdict(lambda: 1), 2:defaultdict(lambda: 1)}
     pentamer = {0: defaultdict(lambda: 4), 1:defaultdict(lambda: 4), 2:defaultdict(lambda: 4)}
     for r in SeqIO.parse(open(cds_filename), 'fasta'):
-        seq = r.seq.tostring().upper()
+        seq = str(r.seq).upper()
         seq_len = len(seq)
         #assert seq_len % 3 == 0
         for i in xrange(seq_len-5):
@@ -137,11 +137,11 @@ def score_cds_by_likelihood(cds_filename, log_scores):
     f = open(cds_filename + '.scores', 'w')
     for r in SeqIO.parse(open(cds_filename), 'fasta'):
         scores = []
-        seq = r.seq.tostring().upper()
+        seq = str(r.seq).upper()
         for frame in xrange(3):
             seq2 = seq[frame:]
             scores.append(sum(log_scores[seq2[i:i+6]+'-'+str(i%3)] for i in xrange(len(seq2)-5)))
-        seq = r.seq.reverse_complement().tostring().upper()
+        seq = str(r.seq.reverse_complement()).upper()
         for frame in xrange(3):
             seq2 = seq[frame:]
             scores.append(sum(log_scores[seq2[i:i+6]+'-'+str(i%3)] for i in xrange(len(seq2)-5)))
@@ -165,12 +165,12 @@ def transdecoder_main(fasta_filename, output_prefix='dumb_orf', min_aa_length=10
     # step 1. predict longest ORFs
     ORFs = [] # list of (sequence, result, strand)
     for r in SeqIO.parse(open(fasta_filename), 'fasta'):
-        seq = r.seq.tostring().upper()
+        seq = str(r.seq).upper()
         result = predict_longest_ORFs(seq, min_aa_length, use_firstORF) # result is {best_frame: [(best_flag, best_s, best_e)]}
         if result is not None:
             ORFs.append((r, result, '+'))
         if use_rev_strand: # predict on - strand as well
-            seq = r.seq.reverse_complement().tostring().upper()
+            seq = str(r.seq.reverse_complement()).upper()
             result = predict_longest_ORFs(seq, min_aa_length, use_firstORF)
             if result is not None:
                 ORFs.append((r, result, '-'))

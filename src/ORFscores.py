@@ -53,10 +53,10 @@ def make_codon_scores(aa_freq, codon_freq):
 
 def make_data_smart(seq, pseudo, window_size=96, step_size=3, frame_shift=0):
     seq = seq.upper()
-    ss = seq[frame_shift:].tostring()
+    ss = str(seq[frame_shift:])
     a, b = len(ss)/3, len(ss)%3
     aa_seq_end = a * 3 + frame_shift if frame_shift <= b else frame_shift-3
-    aa = seq[frame_shift:aa_seq_end].translate().tostring()
+    aa = str(seq[frame_shift:aa_seq_end].translate())
     aa_window_size = window_size / 3 
     n = len(ss)
     
@@ -155,7 +155,7 @@ def find_chunks(rec, bdt, o_all):
     ans0 = bdt.predict(stuff0)
     ans1 = bdt.predict(stuff1)
     ans2 = bdt.predict(stuff2)
-    start_dict,stop_dict = find_start_stop_codons(rec.seq.tostring())
+    start_dict,stop_dict = find_start_stop_codons(str(rec.seq))
     E,O = findPath.make_DP_matrix(ans0, ans1, ans2, start_dict, stop_dict)
 
     i, j = E.argmax()/3, E.argmax()%3
