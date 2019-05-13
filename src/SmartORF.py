@@ -321,10 +321,10 @@ def distribute_ANGEL_predict(fasta_filename, output_prefix, bdt_pickle_filename,
 
     print >> sys.stderr, "Output written to {0}.ANGEL.cds, {0}.ANGEL.pep, {0}.ANGEL.utr".format(output_prefix)
 
-#    for x in list_of_fasta:
-#        os.remove(x)
-#        os.remove(x + '.ANGEL.cds')
-#        os.remove(x + '.ANGEL.pep')
-#        os.remove(x + '.ANGEL.utr')
+    for x in list_of_fasta:
+        os.remove(x)
+        os.remove(x + '.ANGEL.cds')
+        os.remove(x + '.ANGEL.pep')
+        os.remove(x + '.ANGEL.utr')
 
-#    os.removedirs(tmpdir)
+    os.removedirs(tmpdir)
