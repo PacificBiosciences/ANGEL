@@ -13,9 +13,9 @@ def compare_files(input_prefix1, input_prefix2, output_prefix):
     pep2 = input_prefix2 + ".pep"
 
     if not os.path.exists(cds1) or not os.path.exists(utr1) or not os.path.exists(pep1):
-        print >> sys.stderr, "Abort! One or more of following files missing:", cds1, utr1, pep1
+        print("Abort! One or more of following files missing:", cds1, utr1, pep1, file=sys.stderr)
     if not os.path.exists(cds2) or not os.path.exists(utr2) or not os.path.exists(pep2):
-        print >> sys.stderr, "Abort! One or more of following files missing:", cds2, utr2, pep2
+        print("Abort! One or more of following files missing:", cds2, utr2, pep2, file=sys.stderr)
 
     d1 = defaultdict(lambda: 0)
     for r in SeqIO.parse(open(pep1), 'fasta'):
@@ -33,7 +33,7 @@ def compare_files(input_prefix1, input_prefix2, output_prefix):
     f_out.write("id\tlen1\tlen2\tpick\n")
 
     to_use = {} # seq id --> 1 if to use file1, 2 otherwise
-    keys = list(set(d1.keys()).union(d2.keys()))
+    keys = list(set(d1.keys()).union(list(d2.keys())))
     keys.sort()
     for k in keys:
         if d1[k] >= d2[k]:

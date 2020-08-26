@@ -20,10 +20,10 @@ def predict_longest_ORFs(seq, min_aa_length, use_firstORF=False):
     start_d, stop_d = ORFscores.find_start_stop_codons(seq)
     result = {0: [], 1: [], 2: []}
 
-    n, m = len(seq)/3, len(seq)%3
+    n, m = len(seq)//3, len(seq)%3
 
-    for frame in xrange(3):
-        starts, stops = start_d[frame].keys(), stop_d[frame].keys()
+    for frame in range(3):
+        starts, stops = list(start_d[frame].keys()), list(stop_d[frame].keys())
         starts.sort()
         stops.sort()
         #print frame, starts, stops
@@ -55,20 +55,20 @@ def predict_longest_ORFs(seq, min_aa_length, use_firstORF=False):
                     result[frame].append(('dumb-3partial', starts[i]*3+frame, n*3+(frame if frame<=m else frame-3)))
 
     # now pick the frame with the longest ORF!
-    if all(len(v)==0 for v in result.itervalues()): # no ORF found
+    if all(len(v)==0 for v in result.values()): # no ORF found
         return None
 
 
     best_frame, best_flag, best_s, best_e, best_len = None, None, None, None, 0
     if not use_firstORF: # find the longest ORF among all frames
-        for _frame, v in result.iteritems():
+        for _frame, v in result.items():
             for (flag, s, e) in v:
                 _len = e - s
                 if _len > best_len:
                     best_frame, best_flag, best_s, best_e, best_len = \
                     _frame, flag, s, e, _len
     else: # use the first ORF among all frames
-        for _frame, v in result.iteritems():
+        for _frame, v in result.items():
             for (flag, s, e) in v:
                 _len = e - s
                 if best_s is None or s < best_s or (s==best_s and _len>best_len):
@@ -96,8 +96,8 @@ def calculate_base_frequency(fasta_filename, output_filename, use_rev_strand=Fal
         if use_rev_strand:
             seq = str(r.seq.reverse_complement()).upper()
             for s in seq: counts[s] += 1
-    _sum = sum(v for v in counts.itervalues())
-    for k,v in counts.iteritems(): freq[k] = counts[k] * 1. / _sum
+    _sum = sum(v for v in counts.values())
+    for k,v in counts.items(): freq[k] = counts[k] * 1. / _sum
     with open(output_filename, 'w') as f:
         for k in ['A', 'T', 'C', 'G']:
             f.write("{0}\t{1}\t{2}\n".format(k, counts[k], freq[k]))
@@ -115,7 +115,7 @@ def calculate_hexa_penta_score(cds_filename, base_freq, output_filename):
         seq = str(r.seq).upper()
         seq_len = len(seq)
         #assert seq_len % 3 == 0
-        for i in xrange(seq_len-5):
+        for i in range(seq_len-5):
             frame = i % 3
             hexamer[frame][seq[i:i+6]] += 1
             pentamer[frame][seq[i:i+5]] += 1
@@ -124,7 +124,7 @@ def calculate_hexa_penta_score(cds_filename, base_freq, output_filename):
 
     f = open(output_filename, 'w')
     for hexa in itertools.product('ATCG', repeat=6):
-        for frame in xrange(3):
+        for frame in range(3):
             hexa = "".join(hexa)
             score = math.log(hexamer[frame][hexa]) - math.log(pentamer[frame][hexa[:5]]) - math.log(base_freq[hexa[-1]])
             f.write("{0}-{1}\t{2}\n".format(hexa, frame, score))
@@ -138,13 +138,13 @@ def score_cds_by_likelihood(cds_filename, log_scores):
     for r in SeqIO.parse(open(cds_filename), 'fasta'):
         scores = []
         seq = str(r.seq).upper()
-        for frame in xrange(3):
+        for frame in range(3):
             seq2 = seq[frame:]
-            scores.append(sum(log_scores[seq2[i:i+6]+'-'+str(i%3)] for i in xrange(len(seq2)-5)))
+            scores.append(sum(log_scores[seq2[i:i+6]+'-'+str(i%3)] for i in range(len(seq2)-5)))
         seq = str(r.seq.reverse_complement()).upper()
-        for frame in xrange(3):
+        for frame in range(3):
             seq2 = seq[frame:]
-            scores.append(sum(log_scores[seq2[i:i+6]+'-'+str(i%3)] for i in xrange(len(seq2)-5)))
+            scores.append(sum(log_scores[seq2[i:i+6]+'-'+str(i%3)] for i in range(len(seq2)-5)))
         f.write("{0}\t{1}\n".format(r.id, "\t".join(map(str, scores))))
         result[r.id] = scores
     f.close()
@@ -161,7 +161,7 @@ def transdecoder_main(fasta_filename, output_prefix='dumb_orf', min_aa_length=10
     """
     sanity_check_cdhit()
 
-    print >> sys.stderr, "predict longest ORFs...."
+    print("predict longest ORFs....", file=sys.stderr)
     # step 1. predict longest ORFs
     ORFs = [] # list of (sequence, result, strand)
     for r in SeqIO.parse(open(fasta_filename), 'fasta'):
@@ -179,13 +179,13 @@ def transdecoder_main(fasta_filename, output_prefix='dumb_orf', min_aa_length=10
     if use_firstORF: # no need to do scoring, just use firstORF
         # simply find the first ORF in ORFs
         write_CDS_n_PEP(ORFs, output_prefix + '.final')
-        print >> sys.stderr, "Dumb ORF prediction done. Final output written to:", output_prefix + '.final.cds', \
-            output_prefix + '.final.utr', output_prefix + '.final.pep'
+        print("Dumb ORF prediction done. Final output written to:", output_prefix + '.final.cds', \
+            output_prefix + '.final.utr', output_prefix + '.final.pep', file=sys.stderr)
         return # all done!
     else: # need to score, write this current one down first
         write_CDS_n_PEP(ORFs, output_prefix)
 
-    print >> sys.stderr, "running CD-HIT to generate non-redundant set...."
+    print("running CD-HIT to generate non-redundant set....", file=sys.stderr)
     # step 2. use CD-hit to remove redundancy, then pick out top <use_top>
     cmd = "cd-hit -T {cpus} -M 0 -i {o}.cds -o {o}.nr90.cds -c 0.90 -n 5".format(o=output_prefix, cpus=cpus)
     subprocess.check_call(cmd, shell=True)
@@ -199,22 +199,22 @@ def transdecoder_main(fasta_filename, output_prefix='dumb_orf', min_aa_length=10
         for _len, r in lengths:
             # ex: r.description >PB.1.1|chr1:26227060-26232896(-)|c242/f4p4/976|m.1 type:complete len:150 strand:+ pos:80-529
             f.write(">{0}\n{1}\n".format(r.description, r.seq))
-    print >> sys.stderr, "Longest 500 non-redundant predicted ORFs written to:", cds_nr_selected_filename
+    print("Longest 500 non-redundant predicted ORFs written to:", cds_nr_selected_filename, file=sys.stderr)
 
 
     # step 3. get base_freq & hexamer scores
-    print >> sys.stderr, "Calculating base frequency from", fasta_filename
+    print("Calculating base frequency from", fasta_filename, file=sys.stderr)
     base_freq = calculate_base_frequency(fasta_filename, fasta_filename+'.base_freq', use_rev_strand)
-    print >> sys.stderr, "Calculating hexamer scores from", cds_nr_selected_filename
+    print("Calculating hexamer scores from", cds_nr_selected_filename, file=sys.stderr)
     log_scores = calculate_hexa_penta_score(cds_nr_selected_filename, base_freq, cds_nr_selected_filename+'.hexamer.scores')
 
     # step 4. score all predicted longest ORFs using log score
-    print >> sys.stderr, "Scoring predicted ORFs...."
+    print("Scoring predicted ORFs....", file=sys.stderr)
     scored_result = score_cds_by_likelihood(output_prefix + '.cds', log_scores)
 
     # step 5. output FINAL, where longest ORFs are output ONLY if its score in frame0 is higher than all other 5
     picked_ids = []
-    for rec_seq_id, scores in scored_result.iteritems():
+    for rec_seq_id, scores in scored_result.items():
         if scores[0] > 0 and scores[0] == max(scores):
             picked_ids.append(rec_seq_id)
 
@@ -222,8 +222,8 @@ def transdecoder_main(fasta_filename, output_prefix='dumb_orf', min_aa_length=10
     selective_write(output_prefix + '.utr', output_prefix + '.final.utr', picked_ids)
     selective_write(output_prefix + '.pep', output_prefix + '.final.pep', picked_ids)
 
-    print >> sys.stderr, "Dumb ORF prediction done. Final output written to:", output_prefix + '.final.cds', \
-        output_prefix + '.final.utr', output_prefix + '.final.pep'
+    print("Dumb ORF prediction done. Final output written to:", output_prefix + '.final.cds', \
+        output_prefix + '.final.utr', output_prefix + '.final.pep', file=sys.stderr)
 
 
 def select_for_training(input_prefix, output_prefix, use_top=500, choose_random=False, cpus=8):
@@ -233,17 +233,17 @@ def select_for_training(input_prefix, output_prefix, use_top=500, choose_random=
     use_top --- number of top records to use
     random --- if True, choose randomly instead of the longest top ones
     """
-    print >> sys.stderr, "running CD-HIT to generate non-redundant set...."
+    print("running CD-HIT to generate non-redundant set....", file=sys.stderr)
     cmd = "cd-hit -T {cpus} -M 0 -i {o}.cds -o {o}.nr90.cds -c 0.90 -n 5".format(o=input_prefix, cpus=cpus)
     subprocess.check_call(cmd, shell=True)
 
     lengths = [(len(r.seq), r.id) for r in SeqIO.parse(open(input_prefix+'.nr90.cds'), 'fasta')]
     if not choose_random:
-        print >> sys.stderr, "Selecting longest {0} entries from non-redundant set....".format(use_top)
+        print("Selecting longest {0} entries from non-redundant set....".format(use_top), file=sys.stderr)
         lengths.sort(key=lambda x: x[0], reverse=True)
         lengths = lengths[:use_top]
     else:
-        print >> sys.stderr, "Selecting random {0} entries from non-redundant set....".format(use_top)
+        print("Selecting random {0} entries from non-redundant set....".format(use_top), file=sys.stderr)
         lengths = random.sample(lengths, min(len(lengths), use_top))
 
     picked_ids = [ rec_seq_id for (seq_len, rec_seq_id) in lengths ]

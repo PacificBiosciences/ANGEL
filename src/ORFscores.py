@@ -5,17 +5,96 @@ import itertools
 from Bio import SeqIO
 from Bio.Alphabet import IUPAC
 import Bio.Data.CodonTable as CodonTable
-import Angel.c_ORFscores as sp2
+#import Angel.c_ORFscores as sp2
 from multiprocessing import Process
 import Angel.findPath as findPath
 
-AMINO_LETTERS = 'ACDEFGHIKLMNPQRSTVWY*'
-NT_LETTERS = 'GATC'
-CODON_LETTERS = ["GGG","GGA","GGT","GGC","GAG","GAA","GAT","GAC","GTG","GTA","GTT","GTC","GCG","GCA","GCT","GCC","AGG","AGA","AGT","AGC","AAG","AAA","AAT","AAC","ATG","ATA","ATT","ATC","ACG","ACA","ACT","ACC","TGG","TGA","TGT","TGC","TAG","TAA","TAT","TAC","TTG","TTA","TTT","TTC","TCG","TCA","TCT","TCC","CGG","CGA","CGT","CGC","CAG","CAA","CAT","CAC","CTG","CTA","CTT","CTC","CCG","CCA","CCT","CCC"]
-DIAMINO_LETTERS = [\
-    ('A', 'A'),('A', 'C'),('A', 'D'),('A', 'E'),('A', 'F'),('A', 'G'),('A', 'H'),('A', 'I'),('A', 'K'),('A', 'L'),('A', 'M'),('A', 'N'),('A', 'P'),('A', 'Q'),('A', 'R'),('A', 'S'),('A', 'T'),('A', 'V'),('A', 'W'),('A', 'Y'),('A', '*'),('C', 'A'),('C', 'C'),('C', 'D'),('C', 'E'),('C', 'F'),('C', 'G'),('C', 'H'),('C', 'I'),('C', 'K'),('C', 'L'),('C', 'M'),('C', 'N'),('C', 'P'),('C', 'Q'),('C', 'R'),('C', 'S'),('C', 'T'),('C', 'V'),('C', 'W'),('C', 'Y'),('C', '*'),('D', 'A'),('D', 'C'),('D', 'D'),('D', 'E'),('D', 'F'),('D', 'G'),('D', 'H'),('D', 'I'),('D', 'K'),('D', 'L'),('D', 'M'),('D', 'N'),('D', 'P'),('D', 'Q'),('D', 'R'),('D', 'S'),('D', 'T'),('D', 'V'),('D', 'W'),('D', 'Y'),('D', '*'),('E', 'A'),('E', 'C'),('E', 'D'),('E', 'E'),('E', 'F'),('E', 'G'),('E', 'H'),('E', 'I'),('E', 'K'),('E', 'L'),('E', 'M'),('E', 'N'),('E', 'P'),('E', 'Q'),('E', 'R'),('E', 'S'),('E', 'T'),('E', 'V'),('E', 'W'),('E', 'Y'),('E', '*'),('F', 'A'),('F', 'C'),('F', 'D'),('F', 'E'),('F', 'F'),('F', 'G'),('F', 'H'),\
-    ('F', 'I'),('F', 'K'),('F', 'L'),('F', 'M'),('F', 'N'),('F', 'P'),('F', 'Q'),('F', 'R'),('F', 'S'),('F', 'T'),('F', 'V'),('F', 'W'),('F', 'Y'),('F', '*'),('G', 'A'),('G', 'C'),('G', 'D'),('G', 'E'),('G', 'F'),('G', 'G'),('G', 'H'),('G', 'I'),('G', 'K'),('G', 'L'),('G', 'M'),('G', 'N'),('G', 'P'),('G', 'Q'),('G', 'R'),('G', 'S'),('G', 'T'),('G', 'V'),('G', 'W'),('G', 'Y'),('G', '*'),('H', 'A'),('H', 'C'),('H', 'D'),('H', 'E'),('H', 'F'),('H', 'G'),('H', 'H'),('H', 'I'),('H', 'K'),('H', 'L'),('H', 'M'),('H', 'N'),('H', 'P'),('H', 'Q'),('H', 'R'),('H', 'S'),('H', 'T'),('H', 'V'),('H', 'W'),('H', 'Y'),('H', '*'),('I', 'A'),('I', 'C'),('I', 'D'),('I', 'E'),('I', 'F'),('I', 'G'),('I', 'H'),('I', 'I'),('I', 'K'),('I', 'L'),('I', 'M'),('I', 'N'),('I', 'P'),('I', 'Q'),('I', 'R'),('I', 'S'),('I', 'T'),('I', 'V'),('I', 'W'),('I', 'Y'),('I', '*'),('K', 'A'),('K', 'C'),('K', 'D'),('K', 'E'),('K', 'F'),('K', 'G'),('K', 'H'),('K', 'I'),('K', 'K'),('K', 'L'),('K', 'M'),('K', 'N'),('K', 'P'),('K', 'Q'),\
-    ('K', 'R'),('K', 'S'),('K', 'T'),('K', 'V'),('K', 'W'),('K', 'Y'),('K', '*'),('L', 'A'),('L', 'C'),('L', 'D'),('L', 'E'),('L', 'F'),('L', 'G'),('L', 'H'),('L', 'I'),('L', 'K'),('L', 'L'),('L', 'M'),('L', 'N'),('L', 'P'),('L', 'Q'),('L', 'R'),('L', 'S'),('L', 'T'),('L', 'V'),('L', 'W'),('L', 'Y'),('L', '*'),('M', 'A'),('M', 'C'),('M', 'D'),('M', 'E'),('M', 'F'),('M', 'G'),('M', 'H'),('M', 'I'),('M', 'K'),('M', 'L'),('M', 'M'),('M', 'N'),('M', 'P'),('M', 'Q'),('M', 'R'),('M', 'S'),('M', 'T'),('M', 'V'),('M', 'W'),('M', 'Y'),('M', '*'),('N', 'A'),('N', 'C'),('N', 'D'),('N', 'E'),('N', 'F'),('N', 'G'),('N', 'H'),('N', 'I'),('N', 'K'),('N', 'L'),('N', 'M'),('N', 'N'),('N', 'P'),('N', 'Q'),('N', 'R'),('N', 'S'),('N', 'T'),('N', 'V'),('N', 'W'),('N', 'Y'),('N', '*'),('P', 'A'),('P', 'C'),('P', 'D'),('P', 'E'),('P', 'F'),('P', 'G'),('P', 'H'),('P', 'I'),('P', 'K'),('P', 'L'),('P', 'M'),('P', 'N'),('P', 'P'),('P', 'Q'),('P', 'R'),('P', 'S'),('P', 'T'),('P', 'V'),('P', 'W'),('P', 'Y'),('P', '*'),('Q', 'A'),('Q', 'C'),('Q', 'D'),('Q', 'E'),('Q', 'F'),('Q', 'G'),('Q', 'H'),('Q', 'I'),('Q', 'K'),('Q', 'L'),('Q', 'M'),('Q', 'N'),('Q', 'P'),('Q', 'Q'),('Q', 'R'),('Q', 'S'),('Q', 'T'),('Q', 'V'),('Q', 'W'),('Q', 'Y'),('Q', '*'),('R', 'A'),('R', 'C'),('R', 'D'),('R', 'E'),('R', 'F'),('R', 'G'),('R', 'H'),('R', 'I'),('R', 'K'),('R', 'L'),('R', 'M'),('R', 'N'),('R', 'P'),('R', 'Q'),('R', 'R'),('R', 'S'),('R', 'T'),('R', 'V'),('R', 'W'),('R', 'Y'),('R', '*'),('S', 'A'),('S', 'C'),('S', 'D'),('S', 'E'),('S', 'F'),('S', 'G'),('S', 'H'),('S', 'I'),('S', 'K'),('S', 'L'),('S', 'M'),('S', 'N'),('S', 'P'),('S', 'Q'),('S', 'R'),('S', 'S'),('S', 'T'),('S', 'V'),('S', 'W'),('S', 'Y'),('S', '*'),('T', 'A'),('T', 'C'),('T', 'D'),('T', 'E'),('T', 'F'),('T', 'G'),('T', 'H'),('T', 'I'),('T', 'K'),('T', 'L'),('T', 'M'),('T', 'N'),('T', 'P'),('T', 'Q'),('T', 'R'),('T', 'S'),('T', 'T'),('T', 'V'),('T', 'W'),('T', 'Y'),('T', '*'),('V', 'A'),('V', 'C'),('V', 'D'),('V', 'E'),('V', 'F'),('V', 'G'),('V', 'H'),('V', 'I'),('V', 'K'),('V', 'L'),('V', 'M'),('V', 'N'),('V', 'P'),('V', 'Q'),('V', 'R'),('V', 'S'),('V', 'T'),('V', 'V'),('V', 'W'),('V', 'Y'),('V', '*'),('W', 'A'),('W', 'C'),('W', 'D'),('W', 'E'),('W', 'F'),('W', 'G'),('W', 'H'),('W', 'I'),('W', 'K'),('W', 'L'),('W', 'M'),('W', 'N'),('W', 'P'),('W', 'Q'),('W', 'R'),('W', 'S'),('W', 'T'),('W', 'V'),('W', 'W'),('W', 'Y'),('W', '*'),('Y', 'A'),('Y', 'C'),('Y', 'D'),('Y', 'E'),('Y', 'F'),('Y', 'G'),('Y', 'H'),('Y', 'I'),('Y', 'K'),('Y', 'L'),('Y', 'M'),('Y', 'N'),('Y', 'P'),('Y', 'Q'),('Y', 'R'),('Y', 'S'),('Y', 'T'),('Y', 'V'),('Y', 'W'),('Y', 'Y'),('Y', '*'),('*', 'A'),('*', 'C'),('*', 'D'),('*', 'E'),('*', 'F'),('*', 'G'),('*', 'H'),('*', 'I'),('*', 'K'),('*', 'L'),('*', 'M'),('*', 'N'),('*', 'P'),('*', 'Q'),('*', 'R'),('*', 'S'),('*', 'T'),('*', 'V'),('*', 'W'),('*', 'Y'),('*', '*')]
+AMINO_LETTERS = ['A', 'C', 'D', 'E', 'F', 'G',\
+		        'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R',\
+				'S', 'T', 'V', 'W', 'Y', '*']
+NT_LETTERS = ['G', 'A', 'T', 'C']
+CODON_LETTERS = ["GGG","GGA","GGT","GGC","GAG","GAA","GAT","GAC","GTG","GTA",
+                 "GTT","GTC","GCG","GCA","GCT","GCC","AGG","AGA","AGT","AGC",
+                 "AAG","AAA","AAT","AAC","ATG","ATA","ATT","ATC","ACG","ACA",
+                 "ACT","ACC","TGG","TGA","TGT","TGC","TAG","TAA","TAT","TAC",
+                 "TTG","TTA","TTT","TTC","TCG","TCA","TCT","TCC","CGG","CGA",
+                 "CGT","CGC","CAG","CAA","CAT","CAC","CTG","CTA","CTT","CTC",
+                 "CCG","CCA","CCT","CCC"]
+DIAMINO_LETTERS = [('A', 'A'),('A', 'C'),('A', 'D'),('A', 'E'),('A', 'F'),('A', 'G'),
+                   ('A', 'H'),('A', 'I'),('A', 'K'),('A', 'L'),('A', 'M'),('A', 'N'),
+                   ('A', 'P'),('A', 'Q'),('A', 'R'),('A', 'S'),('A', 'T'),('A', 'V'),
+                   ('A', 'W'),('A', 'Y'),('A', '*'),('C', 'A'),('C', 'C'),('C', 'D'),
+                   ('C', 'E'),('C', 'F'),('C', 'G'),('C', 'H'),('C', 'I'),('C', 'K'),
+                   ('C', 'L'),('C', 'M'),('C', 'N'),('C', 'P'),('C', 'Q'),('C', 'R'),
+                   ('C', 'S'),('C', 'T'),('C', 'V'),('C', 'W'),('C', 'Y'),('C', '*'),
+                   ('D', 'A'),('D', 'C'),('D', 'D'),('D', 'E'),('D', 'F'),('D', 'G'),
+                   ('D', 'H'),('D', 'I'),('D', 'K'),('D', 'L'),('D', 'M'),('D', 'N'),
+                   ('D', 'P'),('D', 'Q'),('D', 'R'),('D', 'S'),('D', 'T'),('D', 'V'),
+                   ('D', 'W'),('D', 'Y'),('D', '*'),('E', 'A'),('E', 'C'),('E', 'D'),
+                   ('E', 'E'),('E', 'F'),('E', 'G'),('E', 'H'),('E', 'I'),('E', 'K'),
+                   ('E', 'L'),('E', 'M'),('E', 'N'),('E', 'P'),('E', 'Q'),('E', 'R'),
+                   ('E', 'S'),('E', 'T'),('E', 'V'),('E', 'W'),('E', 'Y'),('E', '*'),
+                   ('F', 'A'),('F', 'C'),('F', 'D'),('F', 'E'),('F', 'F'),('F', 'G'),
+                   ('F', 'H'),('F', 'I'),('F', 'K'),('F', 'L'),('F', 'M'),('F', 'N'),
+                   ('F', 'P'),('F', 'Q'),('F', 'R'),('F', 'S'),('F', 'T'),('F', 'V'),
+                   ('F', 'W'),('F', 'Y'),('F', '*'),('G', 'A'),('G', 'C'),('G', 'D'),
+                   ('G', 'E'),('G', 'F'),('G', 'G'),('G', 'H'),('G', 'I'),('G', 'K'),
+                   ('G', 'L'),('G', 'M'),('G', 'N'),('G', 'P'),('G', 'Q'),('G', 'R'),
+                   ('G', 'S'),('G', 'T'),('G', 'V'),('G', 'W'),('G', 'Y'),('G', '*'),
+                   ('H', 'A'),('H', 'C'),('H', 'D'),('H', 'E'),('H', 'F'),('H', 'G'),
+                   ('H', 'H'),('H', 'I'),('H', 'K'),('H', 'L'),('H', 'M'),('H', 'N'),
+                   ('H', 'P'),('H', 'Q'),('H', 'R'),('H', 'S'),('H', 'T'),('H', 'V'),
+                   ('H', 'W'),('H', 'Y'),('H', '*'),('I', 'A'),('I', 'C'),('I', 'D'),
+                   ('I', 'E'),('I', 'F'),('I', 'G'),('I', 'H'),('I', 'I'),('I', 'K'),
+                   ('I', 'L'),('I', 'M'),('I', 'N'),('I', 'P'),('I', 'Q'),('I', 'R'),
+                   ('I', 'S'),('I', 'T'),('I', 'V'),('I', 'W'),('I', 'Y'),('I', '*'),
+                   ('K', 'A'),('K', 'C'),('K', 'D'),('K', 'E'),('K', 'F'),('K', 'G'),
+                   ('K', 'H'),('K', 'I'),('K', 'K'),('K', 'L'),('K', 'M'),('K', 'N'),
+                   ('K', 'P'),('K', 'Q'),('K', 'R'),('K', 'S'),('K', 'T'),('K', 'V'),
+                   ('K', 'W'),('K', 'Y'),('K', '*'),('L', 'A'),('L', 'C'),('L', 'D'),
+                   ('L', 'E'),('L', 'F'),('L', 'G'),('L', 'H'),('L', 'I'),('L', 'K'),
+                   ('L', 'L'),('L', 'M'),('L', 'N'),('L', 'P'),('L', 'Q'),('L', 'R'),
+                   ('L', 'S'),('L', 'T'),('L', 'V'),('L', 'W'),('L', 'Y'),('L', '*'),
+                   ('M', 'A'),('M', 'C'),('M', 'D'),('M', 'E'),('M', 'F'),('M', 'G'),
+                   ('M', 'H'),('M', 'I'),('M', 'K'),('M', 'L'),('M', 'M'),('M', 'N'),
+                   ('M', 'P'),('M', 'Q'),('M', 'R'),('M', 'S'),('M', 'T'),('M', 'V'),
+                   ('M', 'W'),('M', 'Y'),('M', '*'),('N', 'A'),('N', 'C'),('N', 'D'),
+                   ('N', 'E'),('N', 'F'),('N', 'G'),('N', 'H'),('N', 'I'),('N', 'K'),
+                   ('N', 'L'),('N', 'M'),('N', 'N'),('N', 'P'),('N', 'Q'),('N', 'R'),
+                   ('N', 'S'),('N', 'T'),('N', 'V'),('N', 'W'),('N', 'Y'),('N', '*'),
+                   ('P', 'A'),('P', 'C'),('P', 'D'),('P', 'E'),('P', 'F'),('P', 'G'),
+                   ('P', 'H'),('P', 'I'),('P', 'K'),('P', 'L'),('P', 'M'),('P', 'N'),
+                   ('P', 'P'),('P', 'Q'),('P', 'R'),('P', 'S'),('P', 'T'),('P', 'V'),
+                   ('P', 'W'),('P', 'Y'),('P', '*'),('Q', 'A'),('Q', 'C'),('Q', 'D'),
+                   ('Q', 'E'),('Q', 'F'),('Q', 'G'),('Q', 'H'),('Q', 'I'),('Q', 'K'),
+                   ('Q', 'L'),('Q', 'M'),('Q', 'N'),('Q', 'P'),('Q', 'Q'),('Q', 'R'),
+                   ('Q', 'S'),('Q', 'T'),('Q', 'V'),('Q', 'W'),('Q', 'Y'),('Q', '*'),
+                   ('R', 'A'),('R', 'C'),('R', 'D'),('R', 'E'),('R', 'F'),('R', 'G'),
+                   ('R', 'H'),('R', 'I'),('R', 'K'),('R', 'L'),('R', 'M'),('R', 'N'),
+                   ('R', 'P'),('R', 'Q'),('R', 'R'),('R', 'S'),('R', 'T'),('R', 'V'),
+                   ('R', 'W'),('R', 'Y'),('R', '*'),('S', 'A'),('S', 'C'),('S', 'D'),
+                   ('S', 'E'),('S', 'F'),('S', 'G'),('S', 'H'),('S', 'I'),('S', 'K'),
+                   ('S', 'L'),('S', 'M'),('S', 'N'),('S', 'P'),('S', 'Q'),('S', 'R'),
+                   ('S', 'S'),('S', 'T'),('S', 'V'),('S', 'W'),('S', 'Y'),('S', '*'),
+                   ('T', 'A'),('T', 'C'),('T', 'D'),('T', 'E'),('T', 'F'),('T', 'G'),
+                   ('T', 'H'),('T', 'I'),('T', 'K'),('T', 'L'),('T', 'M'),('T', 'N'),
+                   ('T', 'P'),('T', 'Q'),('T', 'R'),('T', 'S'),('T', 'T'),('T', 'V'),
+                   ('T', 'W'),('T', 'Y'),('T', '*'),('V', 'A'),('V', 'C'),('V', 'D'),
+                   ('V', 'E'),('V', 'F'),('V', 'G'),('V', 'H'),('V', 'I'),('V', 'K'),
+                   ('V', 'L'),('V', 'M'),('V', 'N'),('V', 'P'),('V', 'Q'),('V', 'R'),
+                   ('V', 'S'),('V', 'T'),('V', 'V'),('V', 'W'),('V', 'Y'),('V', '*'),
+                   ('W', 'A'),('W', 'C'),('W', 'D'),('W', 'E'),('W', 'F'),('W', 'G'),
+                   ('W', 'H'),('W', 'I'),('W', 'K'),('W', 'L'),('W', 'M'),('W', 'N'),
+                   ('W', 'P'),('W', 'Q'),('W', 'R'),('W', 'S'),('W', 'T'),('W', 'V'),
+                   ('W', 'W'),('W', 'Y'),('W', '*'),('Y', 'A'),('Y', 'C'),('Y', 'D'),
+                   ('Y', 'E'),('Y', 'F'),('Y', 'G'),('Y', 'H'),('Y', 'I'),('Y', 'K'),
+                   ('Y', 'L'),('Y', 'M'),('Y', 'N'),('Y', 'P'),('Y', 'Q'),('Y', 'R'),
+                   ('Y', 'S'),('Y', 'T'),('Y', 'V'),('Y', 'W'),('Y', 'Y'),('Y', '*'),
+                   ('*', 'A'),('*', 'C'),('*', 'D'),('*', 'E'),('*', 'F'),('*', 'G'),
+                   ('*', 'H'),('*', 'I'),('*', 'K'),('*', 'L'),('*', 'M'),('*', 'N'),
+                   ('*', 'P'),('*', 'Q'),('*', 'R'),('*', 'S'),('*', 'T'),('*', 'V'),
+                   ('*', 'W'),('*', 'Y'),('*', '*')]
+
 
 
 START_CODONS = ['ATG']  # for now, stick with most canonical start codon
@@ -44,7 +123,7 @@ def make_diamino_scores(freq, diamino_range):
 def make_codon_scores(aa_freq, codon_freq):
     arr = []
     letters = NT_LETTERS
-    for codon, aa in CodonTable.standard_dna_table.forward_table.iteritems():
+    for codon, aa in CodonTable.standard_dna_table.forward_table.items():
         arr.append(aa_freq[aa]*1./codon_freq[codon])
     for codon in CodonTable.standard_dna_table.stop_codons:
         arr.append(aa_freq['*']*1./codon_freq[codon])
@@ -54,13 +133,14 @@ def make_codon_scores(aa_freq, codon_freq):
 def make_data_smart(seq, pseudo, window_size=96, step_size=3, frame_shift=0):
     seq = seq.upper()
     ss = str(seq[frame_shift:])
-    a, b = len(ss)/3, len(ss)%3
+    a, b = len(ss)//3, len(ss)%3
     aa_seq_end = a * 3 + frame_shift if frame_shift <= b else frame_shift-3
     aa = str(seq[frame_shift:aa_seq_end].translate())
-    aa_window_size = window_size / 3 
+    aa_window_size = window_size // 3 
     n = len(ss)
     
-    o = sp2.CDSWindowFeat()
+    #o = sp2.CDSWindowFeat()
+    o = CDSWindowFeat()
     cur_a = aa[:aa_window_size]
     cur_s = ss[:window_size]
     o.calc_amino_count(cur_a)
@@ -71,7 +151,7 @@ def make_data_smart(seq, pseudo, window_size=96, step_size=3, frame_shift=0):
     codon_freq = o.get_codon_freq(pseudo, .0001)
     arr = make_amino_scores(aa_freq)+make_diamino_scores(di_freq,o.diamino_range)+make_codon_scores(aa_freq,codon_freq)
     data = [arr]    
-    for i in xrange(1, len(aa) - aa_window_size):
+    for i in range(1, len(aa) - aa_window_size):
         # s advances by 3, now at ss[i*3:i*3+window_size]
         # a advances by 1, now at aa[i:i+aa_window_size]
         o.calc_amino_count(cur_a[0], -1)
@@ -80,7 +160,7 @@ def make_data_smart(seq, pseudo, window_size=96, step_size=3, frame_shift=0):
         o.calc_codon_count(ss[(i-1)*3+window_size:(i)*3+window_size], 3, 1)
         o.diamino_changed = {} # must clear out THIS! 
         o.deduct_diamino_count(cur_a, len(cur_a), 1)        
-        cur_a = aa[i:i+aa_window_size]        
+        cur_a = aa[i:i+aa_window_size]
         o.add_diamino_count(cur_a, len(cur_a), 1)
         cur_s = ss[i*3:i*3+window_size]
         aa_freq = o.get_amino_freq(pseudo, .0001)
@@ -101,14 +181,14 @@ def find_start_stop_codons(seq):
     """
     stop_d = {0: {}, 1: {}, 2: {}}
     start_d = {0: {}, 1: {}, 2: {}}
-    for i in xrange(len(seq)-2):
+    for i in range(len(seq)-2):
         if seq[i:i+3] in STOP_CODONS:
             frame = i % 3
-            nth = (i-frame) / 3
+            nth = (i-frame) // 3
             stop_d[i%3][nth] = seq[i:i+3]
         elif seq[i:i+3] in START_CODONS:
             frame = i % 3
-            nth = (i-frame) / 3
+            nth = (i-frame) // 3
             start_d[i%3][nth] = seq[i:i+3]
     return start_d, stop_d
 
@@ -116,7 +196,7 @@ def find_start_stop_codons(seq):
 # def find_indel(seq, min_i, max_i, bdt, background, target_frame, old_score, stop_when_found=True):
 #     best_score, best_moves = old_score, []
 #     # try deleting one base first
-#     for i in xrange(min_i*3, max_i*3):
+#     for i in range(min_i*3, max_i*3):
 #         new_seq = seq[:i] + seq[(i+1):]
 #         start_dict, stop_dict = find_start_stop_codons(new_seq.tostring())
 #         if len(stop_dict[target_frame]) > 0: continue # not feasible if introduces a stop codon
@@ -128,7 +208,7 @@ def find_start_stop_codons(seq):
 #         elif score == best_score:
 #             best_moves.append((i, new_seq))
 #
-#     for i in xrange(min_i*3, max_i*3):
+#     for i in range(min_i*3, max_i*3):
 #         new_seq = seq[:i] + seq[(i+2):]
 #         start_dict, stop_dict = find_start_stop_codons(new_seq.tostring())
 #         if len(stop_dict[target_frame]) > 0: continue # not feasible if introduces a stop codon
@@ -158,7 +238,7 @@ def find_chunks(rec, bdt, o_all):
     start_dict,stop_dict = find_start_stop_codons(str(rec.seq))
     E,O = findPath.make_DP_matrix(ans0, ans1, ans2, start_dict, stop_dict)
 
-    i, j = E.argmax()/3, E.argmax()%3
+    i, j = E.argmax()//3, E.argmax()%3
     last = i, j
     chunks = [] # (frame, start, stop)
     while True:
@@ -196,7 +276,7 @@ def extend_in_frame(cur_begin, cur_end, starts, stops, size):
         if i in stops:
             furthest_start = i + 1
             # find instead the furthest possible stop, going in increment
-            for k in xrange(i+1, cur_end):
+            for k in range(i+1, cur_end):
                 if k in starts:
                     furthest_start = k
                     break
@@ -219,10 +299,10 @@ def predict_ORF(rec, bdt, o_all, min_aa_len=200):
     chunks, E, O, ans0, ans1, ans2, start_dict, stop_dict = find_chunks(rec, bdt, o_all)
     ans = {0: ans0, 1: ans1, 2: ans2}
 
-    n, m = len(rec.seq)/3, len(rec.seq)%3
+    n, m = len(rec.seq)//3, len(rec.seq)%3
     if len(chunks) == 1:
         _frame, _end, _begin = chunks[0]
-        e_start, e_stop = extend_in_frame(_begin, _end, start_dict[_frame], stop_dict[_frame], (len(rec.seq)-_frame)/3)
+        e_start, e_stop = extend_in_frame(_begin, _end, start_dict[_frame], stop_dict[_frame], (len(rec.seq)-_frame)//3)
         #print "single chunk for", rec.id
         #print chunks[0], "extended to", e_start, e_stop
 
@@ -247,9 +327,9 @@ def predict_ORF(rec, bdt, o_all, min_aa_len=200):
     else:
         good = []
         for _frame,_end,_begin in chunks:
-            e_start, e_stop = extend_in_frame(_begin, _end, start_dict[_frame], stop_dict[_frame], (len(rec.seq)-_frame)/3)
+            e_start, e_stop = extend_in_frame(_begin, _end, start_dict[_frame], stop_dict[_frame], (len(rec.seq)-_frame)//3)
             e_start2 = 0 if e_start is None else e_start
-            e_stop2 = (len(rec.seq)-_frame) / 3 if e_stop is None else e_stop
+            e_stop2 = (len(rec.seq)-_frame) // 3 if e_stop is None else e_stop
             e_len = e_stop2 - e_start2 + 1
             if e_len >= min_aa_len and sum(ans[_frame][e_start2:e_stop2]) >= .5 * e_len:
                 good.append((_frame, e_stop, e_start))
@@ -270,13 +350,13 @@ def main_for_Gloria(input_fasta, output_prefix, bdt, o_all):
     f_fa = open(output_prefix+'.fa', 'w')
     f_pep = open(output_prefix+'.pep', 'w')
     for rec in SeqIO.parse(open(input_fasta), 'fasta'):
-        print >> sys.stderr, "predicting for", rec.id
+        print("predicting for", rec.id, file=sys.stderr)
         flag, name, good = predict_ORF(rec, bdt, o_all, min_chunk_size=50)
         #print >> sys.stderr, flag, name, good
         status, completeness = flag.split('-')
         for _frame, _stop, _start in good:
             s = _start * 3 + _frame if _start is not None else _frame
-            e = _stop * 3 + _frame + 3 if _stop is not None else (len(rec.seq)/3)*3 + (_frame if len(rec.seq)%3 >= _frame else 0)
+            e = _stop * 3 + _frame + 3 if _stop is not None else (len(rec.seq)//3)*3 + (_frame if len(rec.seq)%3 >= _frame else 0)
             f_csv.write("{id}\t{stat}\t{com}\t{fr}\t{s}-{e}\n".format(\
                 id=rec.id, stat=status, com=completeness, fr=_frame, s=s+1, e=e))
             f_fa.write(">{id};{stat};{com};{fr};{s}-{e}\n".format(\
@@ -292,11 +372,118 @@ def main_for_Gloria(input_fasta, output_prefix, bdt, o_all):
 def distribute_forGloria(list_of_fasta, bdt, o_all):
     workers = []
     for input_fasta in list_of_fasta:
-        print >> sys.stderr, "Pool worker for", input_fasta
+        print("Pool worker for", input_fasta, file=sys.stderr)
         p = Process(target=main_for_Gloria, args=(input_fasta, input_fasta+'.ORF', bdt, o_all,))
         p.start()
         workers.append(p)
 
     for p in workers:
-        print >> sys.stderr, "waiting for worker", p.name
+        print("waiting for worker", p.name, file=sys.stderr)
         p.join()
+
+
+class CDSWindowFeat:
+    def __init__(self):
+        """
+        Input filename: should be a fasta filename containing just CDS sequences (in-frame)
+        """
+        self.diamino_range = [1,2,3,4] # parameter k
+        self.amino_total = 0
+        self.amino_count = {}
+        # init amino count
+        for x in AMINO_LETTERS:
+            self.amino_count[x] = 0
+
+        self.codon_total = 0
+        self.codon_count = {}
+        for y in CODON_LETTERS:
+            self.codon_count[y] = 0
+
+        self.diamino_count = {} # dict of k --> (A_i, B_j) --> count
+        self.diamino_total = {}
+        for k in self.diamino_range:
+            self.diamino_total[k] = 0
+            self.diamino_count[k] = {}
+            for x, y in DIAMINO_LETTERS:
+                self.diamino_count[k][(x, y)] = 0
+
+        self.amino_freq = {}
+        self.codon_freq = {}
+        self.diamino_freq = {}
+        self.diamino_changed = {} # (k, x, y)
+
+    def calc_amino_count(self, aa_seq, factor=1):
+        for x in aa_seq:
+            self.amino_count[x] += 1 * factor
+            self.amino_total += 1 * factor
+
+    def calc_codon_count(self, nt_seq, nt_len, factor=1):
+        for i in range(0, nt_len-2, 3):
+            self.codon_count[nt_seq[i:i+3]] += 1 * factor
+            self.codon_total += 1 * factor
+
+    def calc_diamino_count(self, aa_seq, aa_len):
+        for i in range(aa_len-1):
+            for k in self.diamino_range:
+                if i + k < aa_len:
+                    x = aa_seq[i]
+                    y = aa_seq[i+k]
+                    self.diamino_count[k][(x,y)] += 1
+                    self.diamino_total[k] += 1
+
+    def deduct_diamino_count(self, aa_seq, aa_len, i_range):
+        for i in range(i_range):
+            for k in self.diamino_range:
+                if i + k < aa_len:
+                    x = aa_seq[i]
+                    y = aa_seq[i+k]
+                    self.diamino_count[k][(x, y)] -= 1
+                    self.diamino_total[k] -= 1
+                    self.diamino_changed[(k, x, y)] = 1
+
+    def add_diamino_count(self, aa_seq, aa_len, i_range):
+        for i in range(aa_len-1, aa_len-1-i_range, -1):
+            for k in self.diamino_range:
+                if i - k >= 0:
+                    x = aa_seq[i-k]
+                    y = aa_seq[i]
+                    self.diamino_count[k][(x, y)] += 1
+                    self.diamino_total[k] += 1
+                    self.diamino_changed[(k, x, y)] = 1
+
+    def get_amino_freq(self, pseudo=None, alpha=0):
+        self.amino_freq = {}
+        for x in AMINO_LETTERS:
+            a = self.amino_count[x]
+            b = self.amino_total
+            if pseudo is not None and alpha > 0:
+                a += alpha*pseudo.amino_count[x]
+                b += alpha*pseudo.amino_total
+            self.amino_freq[x] = a * 1. / b
+        return self.amino_freq
+
+    def get_codon_freq(self, pseudo=None, alpha=0):
+        self.codon_freq = {}
+        for x in CODON_LETTERS:
+            a = self.codon_count[x]
+            b = self.codon_total
+            if pseudo is not None and alpha > 0:
+                #print "adding pseudo for codon ferq", alpha
+                a += alpha*pseudo.codon_count[x]
+                b += alpha*pseudo.codon_total
+            self.codon_freq[x] = a * 1. / b
+        return self.codon_freq
+
+    def get_diamino_freq(self, pseudo=None, alpha=0, clear_dict=True):
+        if clear_dict: self.diamino_freq = {}
+        for k in self.diamino_range:
+            if clear_dict: self.diamino_freq[k] = {}
+            for x, y in DIAMINO_LETTERS:
+                if not clear_dict and (k, x, y) not in self.diamino_changed: continue
+                a = self.diamino_count[k][(x, y)]
+                b = self.diamino_total[k]
+                if pseudo is not None and alpha> 0:
+                    a += alpha*pseudo.diamino_count[k][(x, y)]
+                    b += alpha*pseudo.diamino_total[k]
+                self.diamino_freq[k][(x,y)] = a * 1. / b
+        return self.diamino_freq

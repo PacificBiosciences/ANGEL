@@ -1,7 +1,7 @@
-__author__ = 'lachesis'
+__author__ = 'etseng@pacb.com'
 
-import os, sys, subprocess, time
-from cPickle import load, dump
+import os, sys, subprocess, time, shutil
+from pickle import load, dump
 from collections import defaultdict
 from multiprocessing import Process, Queue, Pool
 import numpy as np
@@ -31,13 +31,13 @@ def add_data_worker(o_all, records, frames, queue):
     #result = []
     for rec in records:
         for i in frames:
-            print >> sys.stderr, "processing record {0}, frame {1}".format(rec.id, i)
+            print("processing record {0}, frame {1}".format(rec.id, i), file=sys.stderr)
             stuff = ORFscores.make_data_smart(rec.seq, o_all, frame_shift=i)
-            print >> sys.stderr, "putting into queue", rec.id
+            print("putting into queue", rec.id, file=sys.stderr)
             queue.put(stuff)
             #result += stuff
-            print >> sys.stderr, "done for ", rec.id
-    print >> sys.stderr, "Done with records"
+            print("done for ", rec.id, file=sys.stderr)
+    print("Done with records", file=sys.stderr)
     #with open(filename, 'w') as f:
     #    dump(result, f)
 
@@ -45,44 +45,44 @@ def get_data_parallel(o_all, records, frames, num_workers):
     data = []
     workers = []
     queue = Queue()
-    bin_size = len(records) / num_workers + 1
-    for i in xrange(num_workers):
+    bin_size = len(records) // num_workers + (1 if len(records)%num_workers>0 else 0)
+    for i in range(num_workers):
         #filename = "tmp.{0}.pickle".format(i)
         #p = Process(target=add_data_worker, args=(o_all, records[bin_size*i:bin_size*(i+1)], frames, queue, filename))
         p = Process(target=add_data_worker, args=(o_all, records[bin_size*i:bin_size*(i+1)], frames, queue))
         workers.append(p)
 
-    print >> sys.stderr, "launching all workers"
+    print("launching all workers", file=sys.stderr)
     for p in workers:
-        print >> sys.stderr, "launching worker", p.name
+        print("launching worker", p.name, file=sys.stderr)
         p.start()
 
     time.sleep(10) # simply wait 30 sec
     # print >> sys.stderr, "waiting for workers to finish...."
     total = len(records)*len(frames)
     fail_count = 0
-    for i in xrange(total):
+    for i in range(total):
         obj = queue.get(timeout=60)
         if obj is not None:
             data += obj
         else:
-            print >> sys.stderr, "record {0} of {1} waittime exceeded! give up!".format(i, total)
+            print("record {0} of {1} waittime exceeded! give up!".format(i, total), file=sys.stderr)
             fail_count += 1
         if fail_count > 10:
-            print >> sys.stderr, "failed waittime more than 10 times. stop!"
+            print("failed waittime more than 10 times. stop!", file=sys.stderr)
             break
 
     # must purge everything in queue
     while not queue.empty():
         data += queue.get()
 
-    print >> sys.stderr, "purged queue. now can join workers."
+    print("purged queue. now can join workers.", file=sys.stderr)
 
     for p in workers:
         p.join()
-    print >> sys.stderr, "all workers done!"
+    print("all workers done!", file=sys.stderr)
 
-    print >> sys.stderr, "retrieved {0} data items".format(len(data))
+    print("retrieved {0} data items".format(len(data)), file=sys.stderr)
     return data
 
 
@@ -90,32 +90,33 @@ def ANGEL_training(cds_filename, utr_filename, output_pickle, num_workers=3):
     coding = [ r for r in SeqIO.parse(open(cds_filename), 'fasta') ]
     utr = [ r for r in SeqIO.parse(open(utr_filename), 'fasta') ]
 
-    o_all = c_ORFscores.CDSWindowFeat()
+    o_all = ORFscores.CDSWindowFeat()
+    #o_all = c_ORFscores.CDSWindowFeat()
     add_to_background(o_all, coding)
     add_to_background(o_all, utr)
 
     # Queue is very inefficient for large data passing
     # instead break the records up into chunk sizes and just combine results together
-    print >> sys.stderr, "running get_data_parallel for coding, chunk 0"
+    print("running get_data_parallel for coding, chunk 0", file=sys.stderr)
     data_pos = get_data_parallel(o_all, coding, [0], num_workers)
     data_neg = get_data_parallel(o_all, utr, [0, 1, 2], num_workers)
 #    num_coding = len(coding)
 #    data_pos = get_data_parallel(o_all, coding[:MAX_RECORD_CHUNK], [0], num_workers)
-#    for i in xrange(1, num_coding/MAX_RECORD_CHUNK + (num_coding%MAX_RECORD_CHUNK>0)):
+#    for i in range(1, num_coding/MAX_RECORD_CHUNK + (num_coding%MAX_RECORD_CHUNK>0)):
 #        print >> sys.stderr, "running get_data_parallel for coding, chunk", i
 #        data_pos += get_data_parallel(o_all, coding[i*MAX_RECORD_CHUNK:(i+1)*MAX_RECORD_CHUNK], [0], num_workers)##
 #
 #    print >> sys.stderr, "running get_data_parallel for UTR, chunk 0"
 #    num_utr = len(utr)
 #    data_neg = get_data_parallel(o_all, utr[:MAX_RECORD_CHUNK], [0, 1, 2], num_workers)
-#    for i in xrange(1, num_utr/MAX_RECORD_CHUNK + (num_utr%MAX_RECORD_CHUNK>0)):
+#    for i in range(1, num_utr/MAX_RECORD_CHUNK + (num_utr%MAX_RECORD_CHUNK>0)):
 #        print >> sys.stderr, "running get_data_parallel for UTR, chunk", i
 #        data_neg += get_data_parallel(o_all, utr[i*MAX_RECORD_CHUNK:(i+1)*MAX_RECORD_CHUNK], [0, 1, 2], num_workers)
 
-    print >> sys.stderr, "size of neg training data: {0}, pos training data: {1}".format(\
-        len(data_neg), len(data_pos))
+    print("size of neg training data: {0}, pos training data: {1}".format(\
+        len(data_neg), len(data_pos)), file=sys.stderr)
 
-    print >> sys.stderr, "using first 10,000 training pos/neg only"
+    print("using first 10,000 training pos/neg only", file=sys.stderr)
     data_neg = data_neg[:10000]
     data_pos = data_pos[:10000]
     data = data_neg + data_pos
@@ -123,11 +124,11 @@ def ANGEL_training(cds_filename, utr_filename, output_pickle, num_workers=3):
     target = [0]*len(data_neg) + [1]*len(data_pos)
     data = np.array(data)
 
-    print >> sys.stderr, "data prep done, running classifier...."
+    print("data prep done, running classifier....", file=sys.stderr)
     bdt = AdaBoostClassifier(n_estimators=50)
     bdt.fit(data, target)
 
-    print >> sys.stderr, "classifier trained. putting pickle to", output_pickle
+    print("classifier trained. putting pickle to", output_pickle, file=sys.stderr)
 
     with open(output_pickle, 'wb') as f:
         dump({'bdt':bdt, 'o_all':o_all}, f)
@@ -155,8 +156,8 @@ def ANGEL_predict_worker(input_fasta, output_prefix, bdt, o_all, min_ANGEL_aa_le
         # convert any non-ATCG to 'A'
         rec.seq = Seq(convert_non_ATCG(str(rec.seq), replace_with='A'))
         seq_len = len(rec.seq)
-        n, m = seq_len/3, seq_len%3
-        print >> sys.stderr, "predicting for", rec.id
+        n, m = seq_len//3, seq_len%3
+        print("predicting for", rec.id, file=sys.stderr)
         # (1a) predict on + strand for ANGEL
         result = defaultdict(lambda: []) # frame --> list of (type, start, end)
         stuff = [] # (frame, type, start, end)  # this should eventually replace result, keeping result for now.
@@ -169,7 +170,7 @@ def ANGEL_predict_worker(input_fasta, output_prefix, bdt, o_all, min_ANGEL_aa_le
             stuff.append((_frame, flag, s, e))
 
         # REGARDLESS OF FRAME, only keep the first ORF unless the later ones overlap or is sufficiently close
-        stuff.sort(key=lambda (a,b,c,d): (c, d-c)) # sort by start, then length
+        stuff.sort(key=lambda a_b_c_d: (a_b_c_d[2], a_b_c_d[3]-a_b_c_d[2])) # sort by start, then length
         i = 1
         while i < len(stuff):
             if stuff[i-1][3]-max_angel_secondORF_distance <= stuff[i][2] <= stuff[i-1][3]+max_angel_secondORF_distance:
@@ -196,20 +197,22 @@ def ANGEL_predict_worker(input_fasta, output_prefix, bdt, o_all, min_ANGEL_aa_le
             rec2 = SeqRecord(rec.seq.reverse_complement(), id=rec.id, description=rec.description)
             result = defaultdict(lambda: []) # frame --> list of (type, start, end)
             flag, name, good = ORFscores.predict_ORF(rec2, bdt, o_all, min_aa_len=min_ANGEL_aa_length)
+
             for _frame, _stop, _start in good:
                 s = _start * 3 + _frame if _start is not None else _frame
                 e = _stop * 3 + _frame + 3 if _stop is not None else n*3 + (_frame if m >= _frame else 0)
+                assert s < e
                 result[_frame].append((flag, s, e))
             # for each frame, only keep the first ORF unless the later ones overlap or is sufficiently close
             for _frame in result:
                 stuff = result[_frame]
-                stuff.sort(key=lambda (a,b,c): (b,c-b)) # sort by start, then length
+                stuff.sort(key=lambda a_b_c: (a_b_c[1],a_b_c[2]-a_b_c[1])) # sort by start, then length
                 i = 1
                 while i < len(stuff):
                     if stuff[i-1][2]-max_angel_secondORF_distance <= stuff[i][1] <= stuff[i-1][2]+max_angel_secondORF_distance:
-                        pass
+                        i += 1
                     else: # is too far, kick it!
-                        stuff.pop(i)
+                        break
                 result[_frame] = stuff
 
             if len(result) > 0:
@@ -226,17 +229,17 @@ def ANGEL_predict_worker(input_fasta, output_prefix, bdt, o_all, min_ANGEL_aa_le
             #print >> sys.stderr, "output mode: best"
             #print >> sys.stderr, ORFs
             best_rec, best_result, best_strand = ORFs[0]
-            best_len = max(max(e-s for (flag,s,e) in v) for v in best_result.itervalues())
+            best_len = max(max(e-s for (flag,s,e) in v) for v in best_result.values())
             for _rec, _result, _strand in ORFs[1:]:
-                _len = max(max(e-s for (flag,s,e) in v) for v in _result.itervalues())
+                _len = max(max(e-s for (flag,s,e) in v) for v in _result.values())
                 if _len > best_len:
                     best_rec, best_result, best_strand, best_len = \
                     _rec, _result, _strand, _len
             ORFs = [(best_rec, best_result, best_strand)]
-        print >> sys.stderr, "writing result for", rec.id, "to", output_prefix
+        print("writing result for", rec.id, "to", output_prefix, file=sys.stderr)
         #print >> sys.stderr, "current ORFs:", ORFs
         starting_index = write_CDS_n_PEP(ORFs, output_prefix, min_utr_length=50, append_file=True, starting_index=starting_index)
-    print >> sys.stderr, "ALL DONE for", output_prefix
+    print("ALL DONE for", output_prefix, file=sys.stderr)
     os.system("touch {0}.DONE".format(output_prefix))
 
 def ANGEL_predict_worker_helper(args):
@@ -246,13 +249,13 @@ def distribute_ANGEL_predict(fasta_filename, output_prefix, bdt_pickle_filename,
     tmpdir = "ANGEL.tmp." + str(int(time.time()))
     os.makedirs(tmpdir)
 
-    print >> sys.stderr, "Reading classifer pickle:", bdt_pickle_filename
+    print("Reading classifer pickle:", bdt_pickle_filename, file=sys.stderr)
     with open(bdt_pickle_filename, 'rb') as f:
         a = load(f)
         bdt = a['bdt']
         o_all = a['o_all']
 
-    print >> sys.stderr, "Splitting input into chunks for parallelization...."
+    print("Splitting input into chunks for parallelization....", file=sys.stderr)
 
     ###
     # split the input into chunks of 1000 (fixed) sequences
@@ -264,18 +267,18 @@ def distribute_ANGEL_predict(fasta_filename, output_prefix, bdt_pickle_filename,
     num_workers = min(num_workers, total_seqs)  # just in case there are fewer sequences than workers
 
     if total_seqs < num_workers * 1000:
-        num_seqs_per_worker = total_seqs / num_workers
+        num_seqs_per_worker = total_seqs // num_workers
     else:
         num_seqs_per_worker = min(1000, total_seqs) # used to be: total_seqs / num_workers + 1
-    num_splits = total_seqs / num_seqs_per_worker + 1
-    handles = [open(os.path.join(tmpdir, output_prefix+'.split_'+str(i)+'.fa'), 'w') for i in xrange(num_splits)]
+    num_splits = total_seqs // num_seqs_per_worker + (1 if total_seqs%num_seqs_per_worker>0 else 0)
+    handles = [open(os.path.join(tmpdir, output_prefix+'.split_'+str(i)+'.fa'), 'w') for i in range(num_splits)]
     i = 0
     for r in SeqIO.parse(open(fasta_filename), 'fasta'):
-        f = handles[i/num_seqs_per_worker]
+        f = handles[i//num_seqs_per_worker]
         f.write(">{0}\n{1}\n".format(r.id, r.seq))
         i += 1
     for f in handles: f.close()
-    handles = filter(lambda f: os.stat(f.name).st_size > 0, handles)
+    handles = [f for f in handles if os.stat(f.name).st_size > 0]
 
     list_of_fasta = [ f.name for f in handles ]
 
@@ -283,7 +286,7 @@ def distribute_ANGEL_predict(fasta_filename, output_prefix, bdt_pickle_filename,
     #workers = []
     data = []
     for i, input_fasta in enumerate(list_of_fasta):
-        print >> sys.stderr, "Pool worker for", input_fasta
+        print("Pool worker for", input_fasta, file=sys.stderr)
         starting_index = i * n + 1
 
         data.append((input_fasta, input_fasta+'.ANGEL', bdt, o_all, \
@@ -300,26 +303,26 @@ def distribute_ANGEL_predict(fasta_filename, output_prefix, bdt_pickle_filename,
     pool = Pool(num_workers)
     pool.map(ANGEL_predict_worker_helper, data)
 
-    print >> sys.stderr, "Closing Pool...."
+    print("Closing Pool....", file=sys.stderr)
     pool.close()
-    print >> sys.stderr, "Joining Pool...."
+    print("Joining Pool....", file=sys.stderr)
     pool.join()
-    print >> sys.stderr, "All workers completed."
+    print("All workers completed.", file=sys.stderr)
 
     cmd = "cat {0} > {1}.ANGEL.cds".format(" ".join(x+'.ANGEL.cds' for x in list_of_fasta), output_prefix)
     if subprocess.check_call(cmd, shell=True)!=0:
-        print >> sys.stderr, "Trouble running command", cmd
+        print("Trouble running command", cmd, file=sys.stderr)
         sys.exit(-1)
     cmd = "cat {0} > {1}.ANGEL.pep".format(" ".join(x+'.ANGEL.pep' for x in list_of_fasta), output_prefix)
     if subprocess.check_call(cmd, shell=True)!=0:
-        print >> sys.stderr, "Trouble running command", cmd
+        print("Trouble running command", cmd, file=sys.stderr)
         sys.exit(-1)
     cmd = "cat {0} > {1}.ANGEL.utr".format(" ".join(x+'.ANGEL.utr' for x in list_of_fasta), output_prefix)
     if subprocess.check_call(cmd, shell=True)!=0:
-        print >> sys.stderr, "Trouble running command", cmd
+        print("Trouble running command", cmd, file=sys.stderr)
         sys.exit(-1)
 
-    print >> sys.stderr, "Output written to {0}.ANGEL.cds, {0}.ANGEL.pep, {0}.ANGEL.utr".format(output_prefix)
+    print("Output written to {0}.ANGEL.cds, {0}.ANGEL.pep, {0}.ANGEL.utr".format(output_prefix), file=sys.stderr)
 
     for x in list_of_fasta:
         os.remove(x)
@@ -327,4 +330,4 @@ def distribute_ANGEL_predict(fasta_filename, output_prefix, bdt_pickle_filename,
         os.remove(x + '.ANGEL.pep')
         os.remove(x + '.ANGEL.utr')
 
-    os.removedirs(tmpdir)
+    shutil.rmtree(tmpdir)

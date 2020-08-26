@@ -15,8 +15,8 @@ def make_DP_matrix(cds0, cds1, cds2, start_dict, stop_dict, frame_shift_penalty=
     E[0, 1] = cds1[0] + (10 * 0 in start_dict[1]) * cds1[0]
     E[0, 2] = cds2[0] + (10 * 0 in start_dict[2]) * cds2[0]
 
-    for i in xrange(1, N):
-        for j in xrange(3):
+    for i in range(1, N):
+        for j in range(3):
             if i >= len(CDS[j]): continue
             #pdb.set_trace()
             if i-1 not in stop_dict[j]:
@@ -25,13 +25,13 @@ def make_DP_matrix(cds0, cds1, cds2, start_dict, stop_dict, frame_shift_penalty=
             else:
                 E[i, j] = 0
                 O[(i, j)] = '*'
-            for k in xrange(3):
+            for k in range(3):
                 if k!=j and i-1 not in stop_dict[k]:
                     tmp = E[i-1, k] + frame_shift_penalty
                     if tmp > E[i, j]:
                         O[(i, j)] = (i-1, k)
                         E[i, j] = tmp
-            for k in xrange(j):
+            for k in range(j):
                 if i not in stop_dict[k]:
                     tmp = E[i, k] + frame_shift_penalty
                     if tmp > E[i, j]:

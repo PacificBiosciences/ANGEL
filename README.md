@@ -2,46 +2,15 @@ ANGEL: Robust Open Reading Frame prediction
 =====
 
 **Latest News**: 
-(05.09.2016) Updated instructions on installing dependencies. Now recommend using Anaconda.
+(08.26.2020) ANGEL is now using Python 3.7+!
 
 (06.27.2014)  See this talk on validating PacBio transcript-based ORF predictions with mass spec data! ANGEL was used for creating the set of ORF predictions from the MCF-7 dataset. [G. Sheynkman: Building a "perfect" proteomics database using PacBio MCF-7 transcriptome data](https://vimeo.com/99358676)
 
 
-Last Updated: 05/13/2019
+Last Updated: 08/26/2020
 
-Current version: 2.7
+Current version: 3.0
 
-===
-
-05.13.2019 Updated to version 2.7. Clean up intermediate files for smart predict.
-
-05.12.2019 Updated to version 2.6. Now complies with latest version of BioPython using `str()` instead of `.tostring()`
-
-
-03.29.2019 Fixed in version 2.5
-
-* `angel_predict` fails if input sequence has non A/T/C/G/. Now automatically replaces it with default 'A'.
-
-
-05.23.2017 New in version 2.4
-
-* An user pointed out a bug in SmartORF.py:169 that would cause an infinite loop if `--use_rev_strand` is called in angel_train.py. Fixed!
-
-
-11.08.2016 New in version 2.3
-
-* MINOR bug in choosing "best" ORF across frames fixed. v2.2 users recommended update to v2.3 for cleaner results.
-
-
-11.03.2016 New in version 2.2
-
-* FATAL bug in inplementing max_angel_secondORF_distance fixed!!! v2.1 users must update to v2.2.
-
-09.28.2016 New in version 2.1
-* added `--use_firstORF` option in `dumb_predict.py` that outputs first ORF instead of longest ORF
-* added `--max_angel_secondORF_distance` option in `angel_predict.py` that only outputs later ORFs if they are close enough to the previous ORFs
-
-===
 
 * <a href="#install">Installation
 
@@ -94,8 +63,8 @@ We will first install Anaconda and create a virtualenv under it. The install dir
 
 (2) Install Anaconda according to [tutorial](http://docs.continuum.io/anaconda/install#linux-install)
 ```
-bash ~/Downloads/Anaconda3-2.4.0-Linux-x86_64.sh
-export PATH=$HOME/anaconda2/bin:$PATH
+bash ~/Anaconda3-2020.02-Linux-x86_64.sh
+export PATH=$HOME/anaconda3/bin:$PATH
 ```
 
 For the `export` line, you may want to add them to `.bashrc` or `.bash_profile` in your home directory. Otherwise you will need to type it everytime you log in.
@@ -107,9 +76,9 @@ conda -V
 conda update conda
 ```
 
-(4) Create a virtual environment ([tutorial](http://uoa-eresearch.github.io/eresearch-cookbook/recipe/2014/11/20/conda/)). I will call it `anaCogent`. Type `y` to agree to the interactive questions.
+(4) Create a conda environment. I will call it `anaCogent`. Type `y` to agree to the interactive questions.
 ```
-conda create -n anaCogent python=2.7 anaconda
+conda create -n anaCogent python=3.7 anaconda
 source activate anaCogent
 ```
 
@@ -123,6 +92,7 @@ Once you have activated the virtualenv, you should see your prompt changing to s
 ```
 conda install -n anaCogent biopython
 conda install -n anaCogent scikit-learn
+conda install -n anaCogent -c anaconda cython
 ```
 
 (6) Clone ANGEL repo and install

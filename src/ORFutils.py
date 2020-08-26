@@ -6,15 +6,15 @@ from Bio import SeqIO
 
 def sanity_check_cdhit():
     if os.system("cd-hit --version")!=256:
-        raise Exception, "Cannot find cd-hit! Abort!"
+        raise Exception("Cannot find cd-hit! Abort!")
 
 def sanity_check_ATCG(func):
     def g(input_string, *arg):
         if type(input_string) is not str:
-            raise TypeError, "Input string must be of string type!"
+            raise TypeError("Input string must be of string type!")
         for s in input_string:
             if s not in ('A','T','C','G'):
-                raise TypeError, "Input string must consist of only ATCG!"
+                raise TypeError("Input string must consist of only ATCG!")
         return func(input_string, *arg)
     return g
 
@@ -31,7 +31,7 @@ def convert_non_ATCG(seq, replace_with='A'):
 
 @sanity_check_ATCG
 def test(seq):
-    print "just a test. input is", seq
+    print("just a test. input is", seq)
 
 
 def format_ORF_id(name, type, frame, start, end, strand):
@@ -49,7 +49,7 @@ def write_CDS_n_PEP(ORFs, output_prefix, min_utr_length=50, append_file=False, s
     f_utr = open(output_prefix + '.utr', 'w' if not append_file else 'a')
     for rec, result, strand in ORFs:
         seq_len = len(rec.seq)
-        for frame, orfs in result.iteritems():
+        for frame, orfs in result.items():
             for type, start, end in orfs:
                 name = rec.id + '|m.' + str(index)
                 index += 1

@@ -6,7 +6,7 @@ ext_modules = [Extension("Angel.c_ORFscores", ["src/c_ORFscores.cpp"], language=
 
 setup(  
         name = 'Angel',
-        version = '2.7',
+        version = '3.0',
         author = 'Elizabeth Tseng',
         author_email = 'etseng@pacificbiosciences.com',
         license = 'LICENSE.txt',
