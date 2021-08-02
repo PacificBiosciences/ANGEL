@@ -1,13 +1,16 @@
-ANGEL: Robust Open Reading Frame prediction
+ANGEL: Robust Open Reading Frame prediction [DEPRECATED]
 =====
 
 **Latest News**: 
+
+(08.02.2021) ANGEL is no longer actively supported. Use at your own risk. We recommend either switching to [GeneMark](http://opal.biology.gatech.edu/GeneMark/) or if you have a reference genome & annotation run [SQANTI3](https://github.com/ConesaLab/SQANTI3) which includes ORF prediction as part of the process.
+
 (08.26.2020) ANGEL is now using Python 3.7+!
 
 (06.27.2014)  See this talk on validating PacBio transcript-based ORF predictions with mass spec data! ANGEL was used for creating the set of ORF predictions from the MCF-7 dataset. [G. Sheynkman: Building a "perfect" proteomics database using PacBio MCF-7 transcriptome data](https://vimeo.com/99358676)
 
 
-Last Updated: 08/26/2020
+Last Updated: 08/02/2021
 
 Current version: 3.0
 
